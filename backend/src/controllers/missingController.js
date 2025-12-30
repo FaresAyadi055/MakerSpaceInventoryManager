@@ -1,11 +1,11 @@
-import LogsService from '../services/logsService.js';
+import MissingService from '../services/missingService.js';
 import pool from '../db/pool.js';
 
-class LogsController {
-    // Get all logs
-    async getAllLogs(req, res) {
+class MissingController {
+    // Get all missing items
+    async getAllMissing(req, res) {
         try {
-            const result = await LogsService.getAllLogs();
+            const result = await MissingService.getAllMissing();
             if (!result.success) {
                 return res.status(result.status || 500).json({
                     success: false,
@@ -17,7 +17,7 @@ class LogsController {
                 data: result.data
             });
         } catch (error) {
-            console.error('Controller error - getAllLogs:', error);
+            console.error('Controller error - getAllMissing:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error'
@@ -25,10 +25,10 @@ class LogsController {
         }
     }
 
-    async getLogById(req, res) {
+    async getMissingById(req, res) {
         try {
             const { id } = req.params;
-            const result = await LogsService.getLogById(id);
+            const result = await MissingService.getMissingById(id);
             if (!result.success) {
                 return res.status(result.status || 404).json({
                     success: false,
@@ -40,16 +40,16 @@ class LogsController {
                 data: result.data
             });
         } catch (error) {
-            console.error('Controller error - getLogById:', error);
+            console.error('Controller error - getMissingById:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error'
             });
         }
     }
-    async createLogEntry(req, res) {
+    async createMissingEntry(req, res) {
         try {
-            const result = await LogsService.createLogEntry(req.body);
+            const result = await MissingService.createMissingEntry(req.body);
             if (!result.success) {
                 return res.status(result.status || 400).json({
                     success: false,
@@ -58,21 +58,21 @@ class LogsController {
             }
             res.status(201).json({
                 success: true,
-                message: 'Log entry created successfully',
+                message: 'Missing entry created successfully',
                 data: result.data
             });
         } catch (error) {
-            console.error('Controller error - createLogEntry:', error);
+            console.error('Controller error - createMissingEntry:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error'
             });
         }
     }
-    async deleteLog(req, res) {
+    async deleteMissing(req, res) {
         try {
             const { id } = req.params;
-            const result = await LogsService.deleteLog(id);
+            const result = await MissingService.deleteMissing(id);
             if (!result.success) {
                 return res.status(result.status || 400).json({
                     success: false,
@@ -81,20 +81,20 @@ class LogsController {
             }
             res.json({
                 success: true,
-                message: result.message || 'Log entry deleted successfully'
+                message: result.message || 'Missing entry deleted successfully'
             });
         } catch (error) {
-            console.error('Controller error - deleteLog:', error);
+            console.error('Controller error - deleteMissing:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error'
             });
         }
     }
-    async updateLog(req, res) {
+    async updateMissing(req, res) {
         try {
             const { id } = req.params;
-            const result = await LogsService.updateLog(id, req.body);
+            const result = await MissingService.updateMissing(id, req.body);
             if (!result.success) {
                 return res.status(result.status || 400).json({
                     success: false,
@@ -103,10 +103,10 @@ class LogsController {
             }
             res.json({
                 success: true,
-                message: result.message || 'Log entry updated successfully'
+                message: result.message || 'Missing entry updated successfully'
             });
         } catch (error) {
-            console.error('Controller error - updateLog:', error);
+            console.error('Controller error - updateMissing:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error'
@@ -114,4 +114,4 @@ class LogsController {
         }
     }
 }
-export default new LogsController();
+export default new MissingController();

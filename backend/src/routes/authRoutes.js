@@ -6,9 +6,10 @@ import { authenticate } from '../middlewares/auth.js';
 const router = express.Router();
 
 // Public routes
-router.post('/login', authController.login);
+router.post('/login', authController.requestLoginCode);
 
 // Protected routes (require authentication)
-router.get('/verify', authenticate, authController.verify);
+router.post('/verify', authController.verifyLoginCode);
+
 
 export default router;

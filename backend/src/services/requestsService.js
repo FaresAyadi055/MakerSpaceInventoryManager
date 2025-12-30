@@ -28,7 +28,7 @@ class RequestsService {
         try {
             const { model_id, student_email, class_name, quantity } = requestData;
             const [result] = await pool.query(
-                'INSERT INTO requests (model_id, student_email, class_name, quantity) VALUES (?, ?, ?, ?)',
+                'INSERT INTO requests (model_id, student_email, class, quantity) VALUES (?, ?, ?, ?)',
                 [model_id, student_email, class_name, quantity]
             );
             const newRequest = {

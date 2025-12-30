@@ -33,7 +33,7 @@ async createLogEntry(logData) {
     try {
         const { model_id, student_email, class_name, quantity } = logData;
         const [result] = await pool.query(
-            'INSERT INTO logs (model_id, student_email, class_name, quantity) VALUES (?, ?, ?, ?)',
+            'INSERT INTO logs (model_id, student_email, class, quantity) VALUES (?, ?, ?, ?)',
             [model_id, student_email, class_name, quantity]
         );
         const newLog = {
@@ -70,7 +70,7 @@ async updateLog(id, logData) {
     try {
         const { model_id, student_email, class_name, quantity } = logData;        
         const [result] = await pool.query(
-            'UPDATE logs SET model_id = ?, student_email = ?, class_name = ?, quantity = ? WHERE id = ?',
+            'UPDATE logs SET model_id = ?, student_email = ?, class = ?, quantity = ? WHERE id = ?',
             [model_id, student_email, class_name, quantity, id]            
         );        
         if (result.affectedRows === 0) {

@@ -9,6 +9,8 @@ import inventoryRoutes from './routes/inventoryRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import logsRoutes from './routes/logsRoutes.js';
 import requestsRoutes from './routes/requestsRoutes.js';
+import missingRoutes from './routes/missingRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 const app = express()
 
 /* ----------------------------- Global Middleware ---------------------------- */
@@ -36,7 +38,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/requests', requestsRoutes);
-
+app.use('/api/missing', missingRoutes);
+app.use('/api/admins', adminRoutes);
 /* ------------------------------ Error Handling ------------------------------ */
 
 // 404 handler

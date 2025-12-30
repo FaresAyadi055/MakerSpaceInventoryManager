@@ -1,4 +1,4 @@
-import RequestsService from '../services/requestsServices.js';
+import RequestsService from '../services/requestsService.js';
 import pool from '../db/pool.js';
 
 class RequestsController {
