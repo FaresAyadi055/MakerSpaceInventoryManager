@@ -1,18 +1,47 @@
 // src/controllers/inventoryController.js
 import inventoryService from '../services/inventoryService.js';
 import pool from '../db/pool.js';
+import jwt from 'jsonwebtoken';
 async function checkIfAdmin(authHeader) {
   try {
     const token = authHeader?.replace('Bearer ', '');
     if (!token) return false;
     
-    // Check if email exists in admins table
-    const [admins] = await pool.query(
-      'SELECT id FROM admins WHERE email = ?',
-      [token] // token is email in our simplified system
-    );
-    
-    return admins.length > 0;
+    try {
+      // Decode JWT without verification first to check structure
+      const decoded = jwt.decode(token);
+      
+      if (decoded && decoded.role === 'admin') {
+        // If role is in token, use it
+        return true;
+      }
+      
+      // If no role in token, verify and check admin table
+      const verified = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_key');
+      const email = verified.email;
+      
+      const [admins] = await pool.query(
+        'SELECT id FROM admins WHERE email = ?',
+        [email]
+      );
+      
+      return admins.length > 0;
+      
+    } catch (jwtError) {
+      // If JWT fails, it might be old email token
+      console.log('JWT failed, trying as plain email');
+      
+      // Check if token looks like an email
+      if (token.includes('@')) {
+        const [admins] = await pool.query(
+          'SELECT id FROM admins WHERE email = ?',
+          [token]
+        );
+        return admins.length > 0;
+      }
+      
+      return false;
+    }
   } catch (error) {
     console.error('Error checking admin status:', error);
     return false;
@@ -27,7 +56,7 @@ class InventoryController {
       
       let query;
       if (isAdmin) {
-        query = 'SELECT * FROM inventory ORDER BY id DESC';
+        query = 'SELECT id, model, description, quantity, location FROM inventory ORDER BY id DESC';
       } else {
         query = 'SELECT id, model, description, quantity FROM inventory ORDER BY id DESC';
       }
