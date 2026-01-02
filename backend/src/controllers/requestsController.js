@@ -46,6 +46,28 @@ class RequestsController {
             });
         }
     }
+    async getRequestsByStudentEmail(req, res) {
+        try {
+            const { student_email } = req.params;
+            const result = await RequestsService.getRequestsByStudentEmail(student_email);
+            if (!result.success) {
+                return res.status(result.status || 404).json({
+                    success: false,
+                    message: result.error
+                });
+            }
+            res.json({
+                success: true,
+                data: result.data
+            });
+        } catch (error) {
+            console.error('Controller error - getRequestsByStudentEmail:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+    }
     async createRequest(req, res) {
         try {
             const result = await RequestsService.createRequest(req.body);

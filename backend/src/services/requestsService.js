@@ -24,6 +24,18 @@ class RequestsService {
             return { success: false, error: 'Database error' };
         }
     }
+    async getRequestsByStudentEmail(student_email) {
+        try {
+            const [rows] = await pool.query(
+                'SELECT * FROM requests WHERE student_email = ?',
+                [student_email]
+            );
+            return { success: true, data: rows };
+        } catch (error) {
+            console.error('Error getting requests:', error);
+            return { success: false, error: 'Database error' };
+        }
+    }
     async createRequest(requestData) {
         try {
             const { model_id, student_email, class_name, quantity } = requestData;

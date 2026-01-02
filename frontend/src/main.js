@@ -6,6 +6,7 @@ import router from './router'
 // PrimeVue 4 Setup
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
+import 'primeicons/primeicons.css'
 import Tooltip from 'primevue/tooltip'
 // PrimeVue 4 Theme
 import Aura from '@primeuix/themes/aura'
@@ -38,7 +39,9 @@ app.use(PrimeVue, {
 })
 
 app.use(ToastService)
+app.directive('tooltip', Tooltip)
 app.use(router)
+
 
 // Register components
 app.component('InputText', InputText)

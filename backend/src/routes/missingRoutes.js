@@ -12,7 +12,10 @@ const router = express.Router();
 router.get('/', authenticate, requireAdmin, MissingController.getAllMissing);
 
 // GET /api/missing/:id - Get single missing item
-router.get('/:id', authenticate, requireAdmin, MissingController.getMissingById);
+router.get('/:id', authenticate, MissingController.getMissingById);
+
+// GET /api/missing/student/:student_email - Get missing items by student email
+router.get('/student_mis/:student_email', authenticate, MissingController.getMissingByStudentEmail);
 
 // POST /api/missing - Create new missing item
 router.post('/', authenticate, MissingController.createMissingEntry);

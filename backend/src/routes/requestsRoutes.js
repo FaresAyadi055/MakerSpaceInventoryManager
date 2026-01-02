@@ -18,6 +18,9 @@ router.get("/", authenticate,requireAdmin, RequestsController.getAllRequests);
 // Get a specific request by ID
 router.get("/:id", authenticate,requireAdmin, RequestsController.getRequestById);  
 
+// Get requests by student email
+router.get("/student_req/:student_email", authenticate, RequestsController.getRequestsByStudentEmail);
+
 // Update a request by ID
 router.put("/:id",authenticate,requireAdmin, RequestsController.updateRequest);
 

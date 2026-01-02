@@ -29,8 +29,8 @@ class adminService {
         try {
             const { email, password_hash } = adminData;
             const [result] = await pool.query(
-                'INSERT INTO admins (email, password) VALUES (?, ?)',
-                [ email, password_hash]
+                'INSERT INTO admins (email) VALUES (?)',
+                [ email]
             );
             return { success: true, data: { id: result.insertId, ...adminData } };
         } catch (error) {
@@ -57,8 +57,8 @@ class adminService {
         try {
             const { email, password_hash } = adminData;
             const [result] = await pool.query(
-                'UPDATE admins SET email = ?, password = ? WHERE id = ?',
-                [email, password_hash, id]
+                'UPDATE admins SET email = ? WHERE id = ?',
+                [email, id]
             );            
             if (result.affectedRows === 0) {
                 return { success: false, error: 'Admin not found', status: 404 };

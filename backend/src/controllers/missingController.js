@@ -47,6 +47,28 @@ class MissingController {
             });
         }
     }
+    async getMissingByStudentEmail(req, res) {
+        try {
+            const { student_email } = req.params;
+            const result = await MissingService.getMissingByStudentEmail(student_email);
+            if (!result.success) {
+                return res.status(result.status || 404).json({
+                    success: false,
+                    message: result.error
+                });
+            }
+            res.json({
+                success: true,
+                data: result.data
+            });
+        } catch (error) {
+            console.error('Controller error - getMissingByStudentEmail:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+    }
     async createMissingEntry(req, res) {
         try {
             const result = await MissingService.createMissingEntry(req.body);

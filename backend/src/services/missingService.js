@@ -29,15 +29,28 @@ async getMissingById(id) {
         return { success: false, error: 'Database error' };
     }
 }   
+async getMissingByStudentEmail(student_email) {
+    try {
+        const [rows] = await pool.query(
+            'SELECT * FROM missing WHERE student = ?',
+            [student_email]
+        );
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error('Error getting missing items:', error);
+        return { success: false, error: 'Database error' };
+    }
+}
 async createMissingEntry(missingData) {
     try {
-        const { model_description, student_email, class_name, quantity } = missingData;
+        const { model, model_description, student_email, class_name, quantity } = missingData;
         const [result] = await pool.query(
-            'INSERT INTO missing (model, student_email, class, quantity) VALUES (?, ?, ?, ?)',
-            [model_description, student_email, class_name, quantity]
+            'INSERT INTO missing (model, description, student, class, quantity) VALUES (?, ?, ?, ?, ?)',
+            [model, model_description, student_email, class_name, quantity]
         );
         const newMissing = {
             id: result.insertId,
+            model,
             model_description,
             student_email,
             class_name,
@@ -68,10 +81,10 @@ async deleteMissing(id) {
 
 async updateMissing(id, missingData) {
     try {
-        const { model, student_email, class_name, quantity } = missingData;        
+        const {id, model, model_description, student_email, class_name, quantity} = missingData;        
         const [result] = await pool.query(
-            'UPDATE missing SET model = ?, student_email = ?, class = ?, quantity = ? WHERE id = ?',
-            [model, student_email, class_name, quantity, id]            
+            'UPDATE missing SET model = ?, description = ?, student = ?, class = ?, quantity = ? WHERE id = ?',
+            [model, model_description, student_email, class_name, quantity, id]            
         );        
         if (result.affectedRows === 0) {
             return { success: false, error: 'Missing item not found', status: 404 };
