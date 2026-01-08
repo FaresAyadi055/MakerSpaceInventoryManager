@@ -78,14 +78,18 @@
                 <div class="space-y-2">
                   <div v-if="request.type === 'available'">
                     <div class="flex items-center justify-between">
+                      <span class="text-surface-600">Model ID:</span>
+                      <span class="font-medium">{{`${request.id}` }}</span>
+                    </div>
+                      <div class="flex items-center justify-between">
                       <span class="text-surface-600">Model:</span>
-                      <span class="font-medium">{{ request.itemName || `Model ID: ${request.model_id}` }}</span>
+                      <span class="font-medium">{{` ${request.model}` }}</span>
                     </div>
                   </div>
                   <div v-else>
                     <div class="flex items-center justify-between">
                       <span class="text-surface-600">Model:</span>
-                      <span class="font-medium">{{ request.model }}</span>
+                      <span class="font-medium">{{ request.model}}</span>
                     </div>
                     <div v-if="request.description" class="flex items-center justify-between">
                       <span class="text-surface-600">Description:</span>
@@ -262,9 +266,7 @@ const loadRequests = async () => {
       const availableData = await availableResponse.json()
       if (availableData.success) {
         availableRequests.value = availableData.data || []
-        
-        // Fetch item names for available requests
-        await fetchItemNames(availableRequests.value)
+        // Model names are now included directly from the API via SQL JOIN
       }
     }
     
@@ -299,38 +301,6 @@ const loadRequests = async () => {
     })
   } finally {
     loading.value = false
-  }
-}
-
-// Fetch item names for available requests
-const fetchItemNames = async (requests) => {
-  try {
-    // Get unique model_ids
-    const modelIds = [...new Set(requests.map(req => req.model_id))]
-    
-    // Fetch all inventory items to get names
-    const inventoryResponse = await fetch(`${apiUrl}/inventory/`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-    
-    if (inventoryResponse.ok) {
-      const inventoryData = await inventoryResponse.json()
-      if (inventoryData.success) {
-        const inventoryMap = {}
-        inventoryData.data.forEach(item => {
-          inventoryMap[item.id] = item.model || item.name
-        })
-        
-        // Add item names to requests
-        requests.forEach(req => {
-          req.itemName = inventoryMap[req.model_id] || `Model ${req.model_id}`
-        })
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching item names:', error)
   }
 }
 

@@ -85,19 +85,18 @@
                 <!-- Model ID Column -->
                 <Column field="model_id" header="Model ID" :sortable="true">
                   <template #body="{ data }">
-                    <Badge :value="data.model_id" severity="contrast" />
+                    <Badge :value="data.id" severity="contrast" />
                   </template>
                 </Column>
 
                 <!-- Model Name Column -->
-                <Column field="model_name" header="Model Name" :sortable="true">
+                <Column field="model" header="Model Name" :sortable="true">
                   <template #body="{ data }">
-                    <span v-if="data.model_name">
-                      {{ data.model_name }}
+                    <span v-if="data.model">
+                      {{ data.model }}
                     </span>
                     <span v-else class="text-surface-400">
-                      <i class="pi pi-spinner pi-spin" v-if="loadingModelNames.has(data.model_id)" />
-                      <span v-else>Loading...</span>
+                      Model ID: {{ data.model_id }}
                     </span>
                   </template>
                 </Column>
@@ -141,8 +140,8 @@
                   <p class="text-sm text-primary-700 mt-1">
                     Quantity: {{ selectedRequest?.quantity || 0 }}
                   </p>
-                  <p class="text-sm text-primary-700 mt-1" v-if="selectedRequest.model_name">
-                    Model: {{ selectedRequest.model_name }}
+                  <p class="text-sm text-primary-700 mt-1" v-if="selectedRequest.model">
+                    Model: {{ selectedRequest.model }}
                   </p>
                 </div>
                 <Button 
@@ -222,7 +221,7 @@
                   <div class="text-xs text-surface-600 space-y-1">
                     <div>ID: {{ selectedRequest.id }}</div>
                     <div>Model ID: {{ selectedRequest.model_id }}</div>
-                    <div v-if="selectedRequest.model_name">Model: {{ selectedRequest.model_name }}</div>
+                    <div v-if="selectedRequest.model">Model: {{ selectedRequest.model }}</div>
                     <div>Student: {{ selectedRequest.student_email }}</div>
                     <div>Class: {{ selectedRequest.class }}</div>
                     <div>Quantity: {{ selectedRequest.quantity }}</div>
@@ -248,7 +247,7 @@
           <label for="editModelId">Model ID </label>
           <InputNumber 
             id="editModelId"
-            v-model="editForm.model_id"
+            v-model="editForm.id"
             :min="1"
             class="mt-2 w-full"
           />
@@ -339,7 +338,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
@@ -367,8 +366,6 @@ const requests = ref([])
 const loading = ref(false)
 const selectedRequest = ref(null)
 const searchQuery = ref('')
-const modelNameCache = ref({}) // Cache for model names to avoid duplicate API calls
-const loadingModelNames = ref(new Set()) // Track which model names are currently loading
 
 // Dialog states
 const showEditDialog = ref(false)
@@ -396,13 +393,6 @@ onMounted(() => {
   checkAdminAccess()
   loadData()
 })
-
-// Watch for changes in requests to load model names
-watch(requests, (newRequests) => {
-  if (newRequests && newRequests.length > 0) {
-    loadModelNamesForRequests(newRequests)
-  }
-}, { immediate: true })
 
 // Check if user is admin
 const checkAdminAccess = () => {
@@ -468,6 +458,7 @@ const loadData = async () => {
     const data = await response.json()
     
     if (data.success && data.data) {
+      // API now returns model name directly via SQL JOIN
       requests.value = data.data.sort((a, b) => (b.id || 0) - (a.id || 0))
       
       toast.add({
@@ -490,50 +481,6 @@ const loadData = async () => {
   } finally {
     loading.value = false
   }
-}
-
-// Load model names for all requests
-const loadModelNamesForRequests = async (requestsList) => {
-  const uniqueModelIds = [...new Set(requestsList.map(r => r.model_id))]
-  
-  // Filter out already cached model IDs
-  const modelIdsToFetch = uniqueModelIds.filter(modelId => 
-    modelId && !modelNameCache.value[modelId] && !loadingModelNames.value.has(modelId)
-  )
-  
-  if (modelIdsToFetch.length === 0) return
-  
-  // Fetch model names for each unique model ID
-  modelIdsToFetch.forEach(async (modelId) => {
-    loadingModelNames.value.add(modelId)
-    
-    try {
-      const response = await fetch(`${apiUrl}/inventory/${modelId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success && data.data) {
-          // Cache the model name
-          modelNameCache.value[modelId] = data.data.model || 'Unknown Model'
-          
-          // Update the request object with model name
-          const requestIndex = requests.value.findIndex(r => r.model_id === modelId)
-          if (requestIndex !== -1) {
-            requests.value[requestIndex].model_name = data.data.model || 'Unknown Model'
-          }
-        }
-      }
-    } catch (error) {
-      console.error(`Error loading model name for ID ${modelId}:`, error)
-      modelNameCache.value[modelId] = 'Error loading name'
-    } finally {
-      loadingModelNames.value.delete(modelId)
-    }
-  })
 }
 
 // Show confirmation dialog
@@ -635,10 +582,14 @@ const updateRequest = async () => {
         life: 3000
       })
       
-      // Update local data
+      // Update local data - preserving model name if available
       const index = requests.value.findIndex(r => r.id === editForm.value.id)
       if (index !== -1) {
-        requests.value[index] = { ...requests.value[index], ...editForm.value }
+        requests.value[index] = { 
+          ...requests.value[index], 
+          ...editForm.value,
+          model: data.data?.model || requests.value[index].model // Preserve model name
+        }
       }
       
       showEditDialog.value = false
@@ -687,7 +638,7 @@ const approveSelectedRequest = () => {
       try {
         // Step 1: Create log entry
         const logData = {
-          model_id: request.model_id,
+          model_id: request.id,
           student_email: request.student_email,
           class_name: request.class,
           quantity: request.quantity
@@ -742,9 +693,6 @@ const approveSelectedRequest = () => {
           // Remove from local data
           requests.value = requests.value.filter(r => r.id !== request.id)
           selectedRequest.value = null
-          
-          // Clear model name from cache if needed
-          delete modelNameCache.value[request.model_id]
         } else {
           throw new Error('Failed to process approval')
         }
@@ -788,7 +736,6 @@ const deleteSelectedRequest = () => {
     'danger',
     async () => {
       const requestId = selectedRequest.value.id
-      const modelId = selectedRequest.value.model_id
       
       try {
         const response = await fetch(`${apiUrl}/requests/${requestId}`, {
@@ -815,12 +762,6 @@ const deleteSelectedRequest = () => {
           // Remove from local data
           requests.value = requests.value.filter(r => r.id !== requestId)
           selectedRequest.value = null
-          
-          // Check if we should clear the model name from cache
-          const otherRequestsWithSameModel = requests.value.filter(r => r.model_id === modelId)
-          if (otherRequestsWithSameModel.length === 0) {
-            delete modelNameCache.value[modelId]
-          }
         } else {
           throw new Error(data.message || 'Failed to delete request')
         }

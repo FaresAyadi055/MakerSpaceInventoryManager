@@ -544,7 +544,7 @@
         <Button 
           label="Cancel" 
           icon="pi pi-times" 
-          @click="showAddDialog = false" 
+          @click="showAddDialog = false; resetNewItemForm()"  
           class="p-button-text"
           severity="danger"
         />
@@ -1106,6 +1106,93 @@ const deleteSelectedItem = () => {
     }
   )
 }
+// Add new item (admin only)
+const addNewItem = async () => {
+  // Validation
+  if (!newItem.value.model?.trim()) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Model Name Required',
+      detail: 'Please enter a model name',
+      life: 3000
+    })
+    return
+  }
+
+  if (newItem.value.quantity < 0) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Invalid Quantity',
+      detail: 'Quantity cannot be negative',
+      life: 3000
+    })
+    return
+  }
+
+  addingItem.value = true
+
+  // Prepare data
+  const itemData = {
+    model: newItem.value.model.trim(),
+    description: newItem.value.description?.trim() || '',
+    quantity: newItem.value.quantity || 0,
+    location: newItem.value.location?.trim() || '',
+    status: newItem.value.status || 'available'
+  }
+
+  try {
+    const response = await fetch(apiUrl + '/inventory/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(itemData)
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    
+    if (data.success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Item Added',
+        detail: 'New item has been added successfully',
+        life: 3000
+      })
+
+      // Reset form and close dialog
+      newItem.value = {
+        model: '',
+        description: '',
+        quantity: 0,
+        location: '',
+        status: 'available'
+      }
+      
+      showAddDialog.value = false
+      
+      // Reload data to show the new item
+      loadData()
+    } else {
+      throw new Error(data.message || 'Failed to add item')
+    }
+  } catch (error) {
+    console.error('Error adding item:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Add Failed',
+      detail: error.message || 'Failed to add new item',
+      life: 5000
+    })
+  } finally {
+    addingItem.value = false
+  }
+}
 // Reset forms
 const resetRequestForm = () => {
   requestForm.value = {
@@ -1116,22 +1203,15 @@ const resetRequestForm = () => {
     quantity: 1
   }
 }
-
 const resetNewItemForm = () => {
   newItem.value = {
-    name: '',
+    model: '',
     description: '',
     quantity: 0,
     location: '',
     status: 'available'
   }
 }
-
-// Initialize request form with user email
-onMounted(() => {
-  loadData()
-  resetRequestForm()
-})
 
 // Handle search
 const handleSearch = () => {

@@ -13,7 +13,7 @@
             </h1>
             <br />
             <p class="text-surface-600 mt-2">
-              Manage all item request logs
+              Manage all approved requests
             </p>
           </div>
           <br />

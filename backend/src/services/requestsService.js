@@ -2,7 +2,7 @@ import pool from '../db/pool.js';
 class RequestsService {
     async getAllRequests() {
         try {
-            const [rows] = await pool.query(` SELECT * FROM requests ORDER BY timestamp DESC `);
+            const [rows] = await pool.query(` SELECT r.id, i.model, r.student_email, r.class, r.quantity, r.timestamp FROM requests r JOIN inventory i ON r.model_id = i.id ORDER BY timestamp DESC `);
             return { success: true, data: rows };
         } catch (error) {
             console.error('Error getting requests:', error);
@@ -27,7 +27,7 @@ class RequestsService {
     async getRequestsByStudentEmail(student_email) {
         try {
             const [rows] = await pool.query(
-                'SELECT * FROM requests WHERE student_email = ?',
+                'SELECT r.id, i.model, r.student_email, r.class, r.quantity, r.timestamp FROM requests r JOIN inventory i ON r.model_id = i.id WHERE r.student_email = ? ORDER BY r.timestamp ASC;',
                 [student_email]
             );
             return { success: true, data: rows };
@@ -41,7 +41,7 @@ class RequestsService {
             const { model_id, student_email, class_name, quantity } = requestData;
             const [result] = await pool.query(
                 'INSERT INTO requests (model_id, student_email, class, quantity) VALUES (?, ?, ?, ?)',
-                [model_id, student_email, class_name, quantity]
+                [model_id,   student_email, class_name, quantity]
             );
             const newRequest = {
                 id: result.insertId,
