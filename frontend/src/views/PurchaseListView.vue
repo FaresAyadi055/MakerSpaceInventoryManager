@@ -85,22 +85,19 @@
                 <!-- Description Column -->
                 <Column field="description" header="Description" :sortable="true" />
 
+                <!-- Location Column -->
+                <Column field="location" header="Location" :sortable="true">
+                  <template #body="{ data }">
+                    <Badge :value="data.location" severity="info" />
+                  </template>
+                </Column>
+
                 <!-- Stock Column -->
                 <Column field="stock" header="Stock" :sortable="true">
                   <template #body="{ data }">
                     <Badge 
                       :value="data.stock" 
                       :severity="getStockSeverity(data.stock)"
-                    />
-                  </template>
-                </Column>
-
-                <!-- Request Count Column -->
-                <Column field="request_count" header="Pending Requests" :sortable="true">
-                  <template #body="{ data }">
-                    <Badge 
-                      :value="data.request_count" 
-                      severity="contrast"
                     />
                   </template>
                 </Column>
@@ -112,13 +109,6 @@
                       :value="data.total_requested" 
                       severity="warning"
                     />
-                  </template>
-                </Column>
-
-                <!-- Location Column -->
-                <Column field="location" header="Location" :sortable="true">
-                  <template #body="{ data }">
-                    <Badge :value="data.location" severity="info" />
                   </template>
                 </Column>
 
@@ -156,11 +146,6 @@
               <div class="card text-center p-6">
                 <div class="text-3xl font-bold text-red-600">{{ urgentPurchaseItems }}</div>
                 <div class="text-surface-600 mt-2">Urgent Purchase Needed</div>
-              </div>
-              <br>
-              <div class="card text-center p-6">
-                <div class="text-3xl font-bold text-blue-600">{{ pendingRequests }}</div>
-                <div class="text-surface-600 mt-2">Total Pending Requests</div>
               </div>
               <br>
               <div class="card text-center p-6">

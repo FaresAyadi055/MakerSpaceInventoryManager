@@ -345,7 +345,6 @@
             id="quantity"
             v-model="requestForm.quantity"
             :min="1"
-            :max="selectedItems?.quantity || 1"
             showButtons
             class="mt-2"
           />

@@ -72,23 +72,11 @@ export const authenticate = async (req, res, next) => {
         role: 'admin'
       };
     } else {
-      // User is a student
-      // Check if student exists in users table (if you have one)
-      // For now, create a minimal user object
       req.user = {
         email: email,
         role: 'student'
       };
       
-      // If you have a users table, you might want to check/update it here
-      // Example:
-      // const [users] = await pool.query(
-      //   'SELECT id, email FROM users WHERE email = ?',
-      //   [email]
-      // );
-      // if (users.length > 0) {
-      //   req.user.id = users[0].id;
-      // }
     }
     
     // Add token expiration info to request for debugging
