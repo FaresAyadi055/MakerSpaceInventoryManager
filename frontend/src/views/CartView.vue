@@ -79,7 +79,7 @@
                   <div v-if="request.type === 'available'">
                     <div class="flex items-center justify-between">
                       <span class="text-surface-600">Model ID:</span>
-                      <span class="font-medium">{{`${request.id}` }}</span>
+                      <span class="font-medium">{{`${request.model_id}` }}</span>
                     </div>
                       <div class="flex items-center justify-between">
                       <span class="text-surface-600">Model:</span>
@@ -281,6 +281,7 @@ const loadRequests = async () => {
       const missingData = await missingResponse.json()
       if (missingData.success) {
         missingRequests.value = missingData.data || []
+        console.log(missingRequests.value)
       }
     }
     

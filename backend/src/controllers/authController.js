@@ -22,7 +22,7 @@ export const requestLoginCode = async (req, res) => {
     }
     
     // Validate medtech.tn email
-    const emailRegex = /^[a-z0-9._%+-]+@medtech\.tn$/i;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(medtech|smu)\.tn$/i
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,

@@ -54,6 +54,7 @@ const testconnection = async () => {
     const connection = await pool.getConnection()
     connection.release()
     console.log('Database connection established successfully.')
+    console.log('connected to ', process.env.DB_HOST)
   } catch (err) {
     console.error('Unable to connect to the database:', err)
     process.exit(1)

@@ -155,7 +155,7 @@ const validateEmail = () => {
     return false
   }
   
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@medtech\.tn$/i
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@(medtech|smu)\.tn$/i
   if (!emailRegex.test(email.value)) {
     emailError.value = 'Please use a valid @medtech.tn email'
     return false

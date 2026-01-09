@@ -2,7 +2,7 @@ import pool from '../db/pool.js';
 class RequestsService {
     async getAllRequests() {
         try {
-            const [rows] = await pool.query(` SELECT r.id, i.model, r.student_email, r.class, r.quantity, r.timestamp FROM requests r JOIN inventory i ON r.model_id = i.id ORDER BY timestamp DESC `);
+            const [rows] = await pool.query(` SELECT r.id, i.model, r.model_id, r.student_email, r.class, r.quantity, r.timestamp FROM requests r JOIN inventory i ON r.model_id = i.id ORDER BY timestamp DESC `);
             return { success: true, data: rows };
         } catch (error) {
             console.error('Error getting requests:', error);
@@ -27,7 +27,7 @@ class RequestsService {
     async getRequestsByStudentEmail(student_email) {
         try {
             const [rows] = await pool.query(
-                'SELECT r.id, i.model, r.student_email, r.class, r.quantity, r.timestamp FROM requests r JOIN inventory i ON r.model_id = i.id WHERE r.student_email = ? ORDER BY r.timestamp ASC;',
+                'SELECT r.id, r.model_id, i.model, r.student_email, r.class, r.quantity, r.timestamp FROM requests r JOIN inventory i ON r.model_id = i.id WHERE r.student_email = ? ORDER BY r.timestamp ASC;',
                 [student_email]
             );
             return { success: true, data: rows };

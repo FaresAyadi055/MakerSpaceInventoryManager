@@ -50,7 +50,7 @@ export const authenticate = async (req, res, next) => {
     const email = decoded.email;
     
     // Validate email format
-    const emailRegex = /^[a-z0-9._%+-]+@medtech\.tn$/i;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(medtech|smu)\.tn$/i
     if (!emailRegex.test(email)) {
       return res.status(401).json({
         success: false,

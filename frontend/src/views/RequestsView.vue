@@ -85,7 +85,7 @@
                 <!-- Model ID Column -->
                 <Column field="model_id" header="Model ID" :sortable="true">
                   <template #body="{ data }">
-                    <Badge :value="data.id" severity="contrast" />
+                    <Badge :value="data.model_id" severity="contrast" />
                   </template>
                 </Column>
 
@@ -247,7 +247,7 @@
           <label for="editModelId">Model ID </label>
           <InputNumber 
             id="editModelId"
-            v-model="editForm.id"
+            v-model="editForm.model_id"
             :min="1"
             class="mt-2 w-full"
           />
@@ -456,7 +456,6 @@ const loadData = async () => {
     }
     
     const data = await response.json()
-    
     if (data.success && data.data) {
       // API now returns model name directly via SQL JOIN
       requests.value = data.data.sort((a, b) => (b.id || 0) - (a.id || 0))

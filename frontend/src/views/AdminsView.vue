@@ -500,7 +500,7 @@ const addNewAdmin = async () => {
   }
 
   // Updated email validation for medtech.tn pattern
-  const emailRegex = /^[a-z0-9._%+-]+[a-z0-9]\.[a-z0-9][a-z0-9._%+-]+@medtech\.tn$/i
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@(medtech|smu)\.tn$/i
   const email = newAdmin.value.email.trim()
   
   if (!emailRegex.test(email)) {
@@ -617,7 +617,7 @@ const updateAdmin = async () => {
   }
 
   // Updated email validation for medtech.tn pattern
-  const emailRegex = /^[a-z0-9._%+-]+[a-z0-9]\.[a-z0-9][a-z0-9._%+-]+@medtech\.tn$/i
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@(medtech|smu)\.tn$/i
   const email = editForm.value.email.trim()
   
   if (!emailRegex.test(email)) {
