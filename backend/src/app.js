@@ -17,7 +17,18 @@ const app = express()
 /* ----------------------------- Global Middleware ---------------------------- */
 
 // Enable CORS
-app.use(cors())
+
+const corsOptions =
+  process.env.NODE_ENV === "production"
+    ? {
+        origin: process.env.CORS_ORIGIN,
+        credentials: true
+      }
+    : {
+        origin: true
+      };
+
+app.use(cors(corsOptions));
 
 // Request logging (dev only)
 if (process.env.NODE_ENV !== 'production') {
