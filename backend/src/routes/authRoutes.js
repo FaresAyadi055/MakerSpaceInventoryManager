@@ -5,11 +5,12 @@ import { authenticate } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-// Public routes
-router.post('/login', authController.requestLoginCode);
+router.post('/magic/request-otp', authController.requestMagicOTP);
+router.post('/magic/verify-otp', authController.verifyMagicOTP);
 
-// Protected routes (require authentication)
-router.post('/verify', authController.verifyLoginCode);
+// Magic token verification (for production)
+router.post('/magic/verify', authController.verifyMagicLogin);
+
 
 
 export default router;

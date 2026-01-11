@@ -1,8 +1,11 @@
 // src/middlewares/auth.js
+import { Magic } from '@magic-sdk/admin';
 import jwt from 'jsonwebtoken';
 import pool from '../db/pool.js';
 
-// Generate JWT token for a user
+// Initialize Magic Admin SDK
+const magic = new Magic(process.env.MAGIC_SECRET_KEY);
+
 export const generateToken = (user) => {
   return jwt.sign(
     {
@@ -15,7 +18,6 @@ export const generateToken = (user) => {
   );
 };
 
-// Authenticate middleware with JWT
 export const authenticate = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -27,30 +29,37 @@ export const authenticate = async (req, res, next) => {
       });
     }
     
-    // Verify JWT token
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_key');
-    } catch (jwtError) {
-      if (jwtError.name === 'TokenExpiredError') {
-        return res.status(401).json({
-          success: false,
-          message: 'Token has expired. Please login again.'
-        });
+    // Check if it's a JWT token (from your backend) or Magic token
+    let email, userId, userRole;
+    
+    if (token.length < 500) {
+      // It's a JWT token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_key');
+      email = decoded.email;
+      userId = decoded.id;
+      userRole = decoded.role;
+    } else {
+      // It's a Magic DID token
+      const magicUser = await magic.users.getMetadataByToken(token);
+      email = magicUser.email;
+      
+      // Check role from database
+      const [admins] = await pool.query(
+        'SELECT id, email FROM admins WHERE email = ?',
+        [email]
+      );
+      
+      if (admins.length > 0) {
+        userId = admins[0].id;
+        userRole = 'admin';
+      } else {
+        userId = null;
+        userRole = 'student';
       }
-      if (jwtError.name === 'JsonWebTokenError') {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid token'
-        });
-      }
-      throw jwtError;
     }
     
-    const email = decoded.email;
-    
-    // Validate email format
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@(medtech|smu)\.tn$/i
+    // ✅ VALIDATE EMAIL FORMAT
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(medtech|smu)\.tn$/i;
     if (!emailRegex.test(email)) {
       return res.status(401).json({
         success: false,
@@ -58,17 +67,11 @@ export const authenticate = async (req, res, next) => {
       });
     }
     
-    // Check if user exists in admins table
-    const [admins] = await pool.query(
-      'SELECT id, email FROM admins WHERE email = ?',
-      [email]
-    );
-    
-    if (admins.length > 0) {
-      // User is an admin
+    // ✅ Set user object
+    if (userRole === 'admin') {
       req.user = {
-        id: admins[0].id,
-        email: admins[0].email,
+        id: userId,
+        email: email,
         role: 'admin'
       };
     } else {
@@ -76,29 +79,35 @@ export const authenticate = async (req, res, next) => {
         email: email,
         role: 'student'
       };
-      
     }
-    
-    // Add token expiration info to request for debugging
-    req.tokenExpiresAt = new Date(decoded.exp * 1000);
     
     next();
   } catch (error) {
     console.error('Authentication error:', error);
     
-    // Don't expose internal errors
-    const message = error.name === 'JsonWebTokenError' 
-      ? 'Invalid authentication token'
-      : 'Authentication failed';
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token has expired. Please login again.'
+      });
+    }
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
     
     res.status(500).json({
       success: false,
-      message: message
+      message: 'Authentication failed'
     });
   }
 };
 
-// Role-based middleware (unchanged)
+// Keep all other middleware functions the same...
+
+// ✅ Role-based middleware (EXACTLY THE SAME AS ORIGINAL)
 export const requireRole = (roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -119,20 +128,19 @@ export const requireRole = (roles) => {
   };
 };
 
-// Check if user is admin middleware
+// ✅ Check if user is admin middleware (EXACTLY THE SAME)
 export const requireAdmin = requireRole(['admin']);
 
-// Check if user is student middleware
+// ✅ Check if user is student middleware (EXACTLY THE SAME)
 export const requireStudent = requireRole(['student']);
 
-// Helper function to create login response
-export const createLoginResponse = (user) => {
-  const token = generateToken(user);
-  
+// ✅ Helper function to create login response (UPDATED for Magic)
+export const createLoginResponse = (user, token) => {
+  // Token can be either Magic DID token or JWT
   return {
     success: true,
     data: {
-      token,
+      token: token, // This will be the Magic DID token
       user: {
         id: user.id,
         email: user.email,
@@ -140,4 +148,14 @@ export const createLoginResponse = (user) => {
       }
     }
   };
+};
+
+// ✅ Export all functions
+export default {
+  generateToken,      // Keep for legacy/transition
+  authenticate,
+  requireRole,
+  requireAdmin,
+  requireStudent,
+  createLoginResponse
 };

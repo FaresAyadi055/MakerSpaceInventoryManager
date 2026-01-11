@@ -292,23 +292,70 @@ const userEmail = computed(() => {
 })
 
 // Logout function
-const logout = () => {
-  // Optionally clear cart on logout (commented out)
-  // clearCart()
-  
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
-  
-  toast.add({
-    severity: 'success',
-    summary: 'Logged out',
-    detail: 'You have been logged out successfully',
-    life: 2000
-  })
-  
-  setTimeout(() => {
-    router.push('/login')
-  }, 500)
+// In your NavBar component
+// /components/NavBar.vue
+// /components/NavBar.vue
+const logout = async () => {
+  try {
+    // 1. Set session flag to indicate we're logging out
+    sessionStorage.setItem('from_logout', 'true')
+    sessionStorage.setItem('force_magic_logout', 'true')
+    
+    // 2. Try to logout from Magic
+    if (window.magic) {
+      try {
+        await window.magic.user.logout()
+        console.log('Logged out from Magic SDK')
+      } catch (magicError) {
+        console.error('Magic logout error:', magicError)
+      }
+    }
+    
+    // 3. Clear ALL storage more aggressively
+    const allKeys = Object.keys(localStorage)
+    allKeys.forEach(key => {
+      // Keep only non-Magic, non-app keys (optional)
+      if (!key.startsWith('__magic') && 
+          !key.startsWith('magic_') && 
+          key !== 'token' && 
+          key !== 'user') {
+        // Keep other keys if needed
+      } else {
+        localStorage.removeItem(key)
+      }
+    })
+    
+    // Clear token and user
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    
+    // 4. Clear sessionStorage except our logout flag
+    const sessionKeys = Object.keys(sessionStorage).filter(key => 
+      !key.includes('logout') && !key.includes('magic')
+    )
+    sessionKeys.forEach(key => sessionStorage.removeItem(key))
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Logged out',
+      detail: 'You have been logged out successfully',
+      life: 2000
+    })
+    
+    // 5. Force page reload to completely clear Magic state
+    setTimeout(() => {
+      window.location.href = '/login'
+    }, 500)
+    
+  } catch (error) {
+    console.error('Logout error:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Logout Failed',
+      detail: 'There was an error logging out',
+      life: 3000
+    })
+  }
 }
 </script>
 <style scoped>
