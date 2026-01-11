@@ -1,16 +1,22 @@
 // src/services/emailService.js
-import nodemailer from 'nodemailer';
+import { Client } from '@microsoft/microsoft-graph-client';
+import { ClientSecretCredential } from '@azure/identity';
 
-// Create transporter
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT) || 587,
-    secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
+// Create Microsoft Graph client
+const createGraphClient = async () => {
+  const credential = new ClientSecretCredential(
+    process.env.AZURE_TENANT_ID,
+    process.env.AZURE_CLIENT_ID,
+    process.env.AZURE_CLIENT_SECRET
+  );
+
+  return Client.initWithMiddleware({
+    authProvider: {
+      getAccessToken: async () => {
+        const token = await credential.getToken('https://graph.microsoft.com/.default');
+        return token.token;
+      }
+    }
   });
 };
 
@@ -18,93 +24,137 @@ const emailService = {
   // Send verification code email
   async sendVerificationEmail(email, code) {
     try {
-      const transporter = createTransporter();
+      const client = await createGraphClient();
       
-      const mailOptions = {
-        from: `"MakerSpace App" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Your Makerspace Login Code',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Makerspace app Login</h2>
-            <p>Your verification code is:</p>
-            <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
-              <h1 style="color: #007bff; font-size: 36px; letter-spacing: 5px; margin: 0;">
-                ${code}
-              </h1>
-            </div>
-            <p>This code will expire in 10 minutes.</p>
-            <p>If you didn't request this code, please ignore this email.</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-            <p style="color: #666; font-size: 12px;">
-              MakerSpace App<br />
-              MedTech University
-            </p>
-          </div>
-        `,
-        text: `Your Makerspace verification code is: ${code}\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`,
+      const message = {
+        message: {
+          subject: 'Your Makerspace Login Code',
+          body: {
+            contentType: 'HTML',
+            content: this.generateEmailHtml(code)
+          },
+          toRecipients: [
+            {
+              emailAddress: {
+                address: email
+              }
+            }
+          ],
+          from: {
+            emailAddress: {
+              address: process.env.AZURE_SENDER_EMAIL
+            }
+          }
+        },
+        saveToSentItems: true
       };
 
-      const info = await transporter.sendMail(mailOptions);
-      console.log(`✅ Verification email sent to ${email}: ${info.messageId}`);
+      await client
+        .api(`/users/${process.env.AZURE_SENDER_EMAIL}/sendMail`)
+        .post(message);
+      
+      console.log(`✅ Verification email sent via Microsoft Graph API to ${email}`);
       return true;
     } catch (error) {
-      console.error('❌ Error sending verification email:', error);
+      console.error('❌ Error sending verification email via Microsoft Graph:', error);
+      
+      // Provide more detailed error information
+      if (error.statusCode) {
+        console.error(`HTTP Status: ${error.statusCode}`);
+      }
+      if (error.body) {
+        console.error(`Error Details: ${JSON.stringify(error.body)}`);
+      }
+      
       throw error;
     }
   },
 
-  // Send request notification to admins
-  async sendRequestNotification(studentEmail, itemName, quantity) {
-    try {
-      // Get all admin emails
-      const [admins] = await pool.query('SELECT email FROM admins');
-      
-      if (admins.length === 0) return;
-      
-      const adminEmails = admins.map(admin => admin.email).join(', ');
-      const transporter = createTransporter();
-      
-      const mailOptions = {
-        from: `"Makerspace Inventory" <${process.env.EMAIL_USER}>`,
-        to: adminEmails,
-        subject: 'New Item Request - Makerspace Inventory',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">New Item Request</h2>
-            <p>A student has requested an item from the inventory:</p>
-            <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #007bff;">
-              <p><strong>Student:</strong> ${studentEmail}</p>
-              <p><strong>Item:</strong> ${itemName}</p>
-              <p><strong>Quantity:</strong> ${quantity}</p>
-              <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
-            </div>
-            <p>Please log in to the admin panel to review this request.</p>
-            <hr style="margin: 20px 0;" />
-            <p style="color: #666; font-size: 12px;">Makerspace Inventory System</p>
-          </div>
-        `,
-      };
-
-      await transporter.sendMail(mailOptions);
-      console.log(`📧 Request notification sent to admins`);
-    } catch (error) {
-      console.error('Error sending request notification:', error);
-    }
+  // Generate email HTML content
+  generateEmailHtml(code) {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Makerspace app Login</h2>
+        <p>Your verification code is:</p>
+        <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
+          <h1 style="color: #007bff; font-size: 36px; letter-spacing: 5px; margin: 0;">
+            ${code}
+          </h1>
+        </div>
+        <p>This code will expire in 10 minutes.</p>
+        <p>If you didn't request this code, please ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="color: #666; font-size: 12px;">
+          MakerSpace App<br />
+          MedTech University
+        </p>
+      </div>
+    `;
   },
 
-  // Test email configuration
+  // Test Microsoft Graph API connection
   async testConnection() {
     try {
-      const transporter = createTransporter();
-      await transporter.verify();
-      console.log('✅ Email server connection successful');
-      return true;
+      const client = await createGraphClient();
+      
+      // Test by getting user info
+      const user = await client
+        .api(`/users/${process.env.AZURE_SENDER_EMAIL}`)
+        .select('displayName,mail,userPrincipalName')
+        .get();
+      
+      console.log('✅ Microsoft Graph API connection successful');
+      console.log(`   Connected as: ${user.mail || user.userPrincipalName}`);
+      console.log(`   Display Name: ${user.displayName}`);
+      
+      return {
+        success: true,
+        user: {
+          displayName: user.displayName,
+          email: user.mail || user.userPrincipalName
+        }
+      };
     } catch (error) {
-      console.error('❌ Email server connection failed:', error.message);
-      return false;
+      console.error('❌ Microsoft Graph API connection failed:', error.message);
+      
+      if (error.statusCode === 401) {
+        console.error('   Check your Azure credentials (Tenant ID, Client ID, Client Secret)');
+      } else if (error.statusCode === 403) {
+        console.error('   Check API permissions. Need: Mail.Send (Application)');
+      } else if (error.statusCode === 404) {
+        console.error(`   User not found: ${process.env.AZURE_SENDER_EMAIL}`);
+      }
+      
+      return {
+        success: false,
+        error: error.message
+      };
     }
   },
+
+  // Test sending capability
+  async testSend() {
+    try {
+      const testEmail = process.env.TEST_EMAIL || process.env.AZURE_SENDER_EMAIL;
+      const testCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      console.log(`📧 Testing email send to: ${testEmail}`);
+      
+      await this.sendVerificationEmail(testEmail, testCode);
+      
+      console.log('✅ Test email sent successfully');
+      return {
+        success: true,
+        message: `Test email sent to ${testEmail}`
+      };
+    } catch (error) {
+      console.error('❌ Test email failed:', error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
 };
 
 export default emailService;

@@ -8,7 +8,7 @@ import emailService from '../services/emailService.js';
 const verificationCodes = new Map();
 
 // ⚡️ CONFIGURATION: Set this to false in production, true for testing
-const DEBUG_MODE = process.env.ACTIVATE_DEBUG === "1"; // Set to 0 in .env to send real emails
+const DEBUG_MODE = process.env.NODE_ENV === 'development';
 
 export const requestLoginCode = async (req, res) => {
   try {
@@ -64,12 +64,12 @@ export const requestLoginCode = async (req, res) => {
       res.json({
         success: true,
         message: 'Verification code sent to email',
-        debugCode: code  // Same field name as before
+        debugCode: code
       });
       
       // Don't send email in debug mode
     } else {
-      // PRODUCTION MODE: Send via email
+      // PRODUCTION MODE: Send via Microsoft Graph API
       await emailService.sendVerificationEmail(email, code);
       
       // Same response structure, no debugCode
@@ -88,13 +88,20 @@ export const requestLoginCode = async (req, res) => {
       verificationCodes.delete(email);
     }
     
+    // Provide specific error message for email failures
+    let errorMessage = 'Failed to send verification code';
+    if (error.statusCode === 401 || error.statusCode === 403) {
+      errorMessage = 'Email service configuration error. Please contact administrator.';
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Failed to send verification code'
+      message: errorMessage
     });
   }
 };
 
+// verifyLoginCode remains the same...
 export const verifyLoginCode = async (req, res) => {
   try {
     const { email, code } = req.body;
