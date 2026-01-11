@@ -344,7 +344,7 @@ const logout = async () => {
     
     // 5. Force page reload to completely clear Magic state
     setTimeout(() => {
-      window.location.href = '/login'
+      window.location.href = '/'
     }, 500)
     
   } catch (error) {
