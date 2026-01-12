@@ -179,7 +179,7 @@ import { exportCSV } from '@/utils/exportCSV.js'
 
 const router = useRouter()
 const toast = useToast()
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
+const baseURL = import.meta.env.VITE_API_URL
 
 // State
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
