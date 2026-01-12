@@ -1,9 +1,9 @@
 import pool from '../db/pool.js'
 
 class ComplexServices {
-async getPurchaselist() {
-    try {
-        const [rows] = await pool.query(`SELECT 
+    async getPurchaselist() {
+        try {
+            const [rows] = await pool.query(`SELECT 
     i.id,
     i.model,
     i.description,
@@ -22,25 +22,17 @@ LEFT JOIN (
         model_id,
         COUNT(*) as request_count,
         SUM(quantity) as total_requested
-    FROM requests
+    FROM \`requests\`
     GROUP BY model_id
 ) r ON i.id = r.model_id
 WHERE r.model_id IS NOT NULL
 ORDER BY needed_to_purchase DESC, i.id ASC;`);
-        
-        console.log(`Query returned ${rows.length} rows`);
-        return { success: true, data: rows };
-    } catch (error) {
-        console.error('❌ Render MySQL Error:', {
-            message: error.message,
-            code: error.code,
-            sqlState: error.sqlState,
-            sqlMessage: error.sqlMessage
-        });
-        
-        // Try a fallback query
-        return await getPurchaselistFallback();
+            return { success: true, data: rows };
+        } catch (error) {
+            console.error('Error getting logs:', error);
+            return { success: false, error: 'Database error' };
+        }
     }
-}}
+}
 
 export default new ComplexServices();
