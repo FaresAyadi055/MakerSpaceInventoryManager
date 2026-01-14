@@ -92,7 +92,7 @@
                       <span class="font-medium">{{ request.model}}</span>
                     </div>
                     <div v-if="request.description" class="flex items-center justify-between">
-                      <span class="text-surface-600">Description:</span>
+                      <span class="text-surface-600">Link:</span>
                       <span class="font-medium text-right">{{ request.description }}</span>
                     </div>
                   </div>
