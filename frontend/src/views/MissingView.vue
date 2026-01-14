@@ -90,11 +90,21 @@
                 </Column>
 
                 <!-- link Column -->
-                <Column field="link" header="Link" :sortable="true">
-                  <template #body="{ data }">
-                    <span class="text-surface-600">{{ data.description || 'No link' }}</span>
-                  </template>
-                </Column>
+        <Column field="link" header="Link" :sortable="true">
+          <template #body="{ data }">
+            <a v-if="data.description" 
+              :href="data.description" 
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary hover:underline font-medium">
+              {{data.model || 'View Link' }}
+              <i class="pi pi-external-link ml-1 text-xs"></i>
+            </a>
+            <span v-else class="text-surface-600 italic">
+              No link
+            </span>
+          </template>
+        </Column>
 
                 <!-- Student Email Column -->
                 <Column field="student" header="Student Email" :sortable="true" />
