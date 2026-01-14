@@ -440,7 +440,7 @@
       <a class="supplier" href="https://tuni-smart-innovation.com/" target="_blank" rel="noopener noreferrer">Tunisia Smart Innovation</a>
     </div>
       <br/>
-    <p class="instruction">This is a link to our supplier website, if you find the item you need, please copy the link to the item and paste it</p>
+    <p class="instruction">This is a link to our supplier website, if you find the item you need, please copy the link to the item and paste it.</p>
     <br/>
     
     <div class="flex-order-1 w-full">
