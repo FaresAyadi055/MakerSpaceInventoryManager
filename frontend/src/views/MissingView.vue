@@ -89,10 +89,10 @@
                   </template>
                 </Column>
 
-                <!-- Description Column -->
-                <Column field="description" header="Description" :sortable="true">
+                <!-- link Column -->
+                <Column field="link" header="Link" :sortable="true">
                   <template #body="{ data }">
-                    <span class="text-surface-600">{{ data.description || 'No description' }}</span>
+                    <span class="text-surface-600">{{ data.description || 'No link' }}</span>
                   </template>
                 </Column>
 
