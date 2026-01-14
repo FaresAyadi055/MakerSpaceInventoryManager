@@ -292,16 +292,6 @@
       />
     </div>
     <br/>
-    <div class="field" v-if="selectedItems.status">
-      <label for="updateStatus">Status</label>
-      <Select 
-        id="updateStatus"
-        v-model="selectedItems.status"
-        :options="statusOptions"
-        placeholder="Select Status"
-        class="mt-2"
-      />
-    </div>
   </div>
 
   <template #footer>
