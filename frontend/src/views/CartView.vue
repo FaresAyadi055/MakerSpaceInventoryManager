@@ -93,7 +93,7 @@
                     </div>
                     <div v-if="request.description" class="flex items-center justify-between">
                       <span class="text-surface-600">Link:</span>
-                      <span class="font-medium text-right">{{ request.description }}</span>
+                      <span class="font-medium text-right"><a :href="request.description" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium">{{request.model || 'View Link' }} <i class="pi pi-external-link ml-1 text-xs"></i></a></span>
                     </div>
                   </div>
 
