@@ -862,7 +862,6 @@ const submitRequest = async () => {
   }
 }
 const submitMissing = async () => {
-  console.log("data"+ missingrequestForm.value);
   // Validation
   if (!missingrequestForm.value.model?.trim()) {
     toast.add({
@@ -873,7 +872,15 @@ const submitMissing = async () => {
     })
     return
   }
-
+  if (missingrequestForm.value.model.trim().length > 60) {
+    toast.add({
+      severity: 'error',
+      summary: 'Model Name Too Long',
+      detail: 'Model name too long',
+      life: 3000
+    })
+    return
+  }
   if (!missingrequestForm.value.class_prefix || !missingrequestForm.value.class_number) {
     toast.add({
       severity: 'warn',
@@ -922,7 +929,9 @@ const submitMissing = async () => {
     if (!response.ok) {
       throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`)
     }
-    
+    if (missingrequestForm.value.model.trim().length > 60){ throw new Error('Model name is too long.')
+      
+    }
     if (data.success) {
       toast.add({
         severity: 'success',
@@ -943,7 +952,9 @@ const submitMissing = async () => {
       
       // Reset the form
       resetMissingRequestForm()
-    } else {
+    } 
+    
+    else {
       throw new Error(data.message || data.error || 'Failed to submit request')
     }
   } catch (error) {
