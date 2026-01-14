@@ -374,6 +374,7 @@
             id="studentEmail"
             v-model="requestForm.student_email"
             :placeholder="userEmail"
+            readonly
             class="mt-2"
           />
         </div>
@@ -435,9 +436,15 @@
   :modal="true"
 >
   <div class="flex flex-wrap gap-4 p-fluid">
+    <div>
+      <a class="supplier" href="https://tuni-smart-innovation.com/" target="_blank" rel="noopener noreferrer">Tunisia Smart Innovation</a>
+    </div>
+      <br/>
+    <p class="instruction">This is a link to our supplier website, if you find the item you need, please copy the link to the item and paste it</p>
+    <br/>
     
     <div class="flex-order-1 w-full">
-      <label for="modelName" class="font-bold block mb-2">Model Name or Reference   </label>
+      <label for="modelName" class="font-bold block mb-2">Model Name </label>
       <InputText 
         id="modelName"
         v-model="missingrequestForm.model"
@@ -447,11 +454,11 @@
     <br/>
 
     <div class="flex-order-2 w-full">
-      <label for="description" class="font-bold block mb-2">Description </label>
+      <label for="description" class="font-bold block mb-2">Link </label>
       <InputText 
         id="description"
         v-model="missingrequestForm.description"
-        placeholder="Short description"
+        placeholder="Paste Link Here"
       />
     </div>
     <br/>
@@ -471,6 +478,7 @@
         id="studentEmail"
         v-model="missingrequestForm.student_email"
         :placeholder="userEmail"
+        readonly
       />
     </div>
     <br/>
@@ -492,7 +500,8 @@
         />
       </div>
     </div>
-
+    <br/>
+    <p class = "warning"> please do not request an item that is already on the inventory list even if it's out of stock, and do not request an item that is not listed on the supplier website.</p>
   </div>
 
   <template #footer>
@@ -1408,5 +1417,30 @@ const formatDate = (dateString) => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.warning {
+  color: #856404;
+  background-color: #fff3cd;
+  border-color: #ffeeba;
+  padding: 10px;
+  border-radius: 5px;
+}
+.supplier {
+  color: #0d6efd;
+  text-decoration: none;
+  font-weight: bold;
+}
+.supplier:hover {
+  text-decoration: underline;
+}
+.supplier:visited {
+  color: #6610f2;
+}
+.instruction{
+  color: black;
+  background-color: #e9ecef;
+  border-color: #ced4da;
+  padding: 10px;
+  border-radius: 5px;
 }
 </style>
