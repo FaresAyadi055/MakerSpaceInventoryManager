@@ -111,7 +111,6 @@ const isAdmin = computed(() => {
 
 // Admin navigation links
 const adminLinks = [
-  { path: '/home', name: 'Inventory', icon: 'pi pi-list-check' },
   { path: '/logs', name: 'Logs', icon: 'pi pi-history' },
   { path: '/requests', name: 'Requests', icon: 'pi pi-inbox' },
   { path: '/missing', name: 'Missing Items', icon: 'pi pi-question-circle' },
