@@ -1265,15 +1265,20 @@ const formatDate = (dateString) => {
 .home {
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  width: 100%;
+  overflow-x: hidden; /* Prevent horizontal scroll on body */
 }
 
 .main-container {
   padding: 1.5rem;
+  width: 100%;
+  box-sizing: border-box; /* Include padding in width calculation */
 }
 
 .content-wrapper {
   max-width: 1800px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .header-section {
@@ -1287,6 +1292,7 @@ const formatDate = (dateString) => {
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
+  width: 100%;
 }
 
 .table-section {
@@ -1326,34 +1332,79 @@ const formatDate = (dateString) => {
   margin-top: 0;
 }
 
-@media (max-width: 1200px) {
-  .main-content-area {
-    flex-direction: column;
+/* MOBILE FIX - Update this section completely */
+@media (max-width: 1000px) {
+  .home {
+    padding: 0;
+    margin: 0;
   }
   
+  .main-container {
+    padding: 0; /* Remove padding on mobile */
+    margin: 0;
+    width: 100vw;
+    max-width: 100vw;
+  }
+  
+  .content-wrapper {
+    max-width: 100vw; /* Remove max-width constraint on mobile */
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+  }
+  
+  .main-content-area {
+    flex-direction: column;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 0;
+  }
+  
+  /* Force table section to be full width */
+  .table-section {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 1rem !important; /* Add only side padding */
+    box-sizing: border-box;
+  }
+  
+  /* Force sidebar to be full width */
   .sidebar-section {
-    width: 100%;
-    margin-top: 1.5rem;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 1.5rem 0 0 0 !important;
+    padding: 0 1rem !important; /* Add only side padding */
+    box-sizing: border-box;
+  }
+    .card.mb-6 {
+    margin-bottom: 1rem !important; 
+  }
+  
+  /* Ensure cards inside also stretch full width */
+  .sidebar-section .card,
+  .table-section .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
   
   .sticky-sidebar {
     position: static;
     max-height: none;
   }
-}
-
-@media (max-width: 768px) {
-  .header-section {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
   
-  .main-container {
-    padding: 1rem;
+  /* Fix header section if needed */
+  .header-section {
+    padding: 0 1rem;
+    box-sizing: border-box;
   }
 }
 
+/* The rest of your existing styles remain as they are */
 .home .page-header {
   margin-bottom: 16px;
 }
