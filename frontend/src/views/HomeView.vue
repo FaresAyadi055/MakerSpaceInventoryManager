@@ -1390,6 +1390,7 @@ const formatDate = (dateString) => {
     max-width: 100% !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
+    margin-bottom: 1rem !important;
   }
   
   .sticky-sidebar {
