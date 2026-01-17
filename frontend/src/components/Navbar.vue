@@ -15,16 +15,6 @@
       <div class="navbar-menu">
         <ul class="nav-links">
           <!-- Home Link (always visible) -->
-          <li class="nav-item">
-            <router-link 
-              to="/home" 
-              class="nav-link"
-              active-class="active"
-            >
-              <i class="pi pi-list-check mr-2"></i>
-              <span>Inventory</span>
-            </router-link>
-          </li>
           
           <!-- Admin Links (only for admins) -->
           <li 
@@ -121,6 +111,7 @@ const isAdmin = computed(() => {
 
 // Admin navigation links
 const adminLinks = [
+  { path: '/home', name: 'Inventory', icon: 'pi pi-list-check' },
   { path: '/logs', name: 'Logs', icon: 'pi pi-history' },
   { path: '/requests', name: 'Requests', icon: 'pi pi-inbox' },
   { path: '/missing', name: 'Missing Items', icon: 'pi pi-question-circle' },
