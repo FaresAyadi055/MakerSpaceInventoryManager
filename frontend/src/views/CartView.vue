@@ -422,6 +422,8 @@ onUnmounted(() => {
 <style scoped>
 .cart-view {
   min-height: 100vh;
+  width: 100%; /* Added */
+  overflow-x: hidden; /* Prevent horizontal scroll */
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
@@ -431,6 +433,8 @@ onUnmounted(() => {
   gap: 1rem;
   overflow-y: auto;
   padding-right: 0.5rem;
+  width: 100%; /* Ensure full width */
+  box-sizing: border-box; /* Include padding in width */
 }
 
 .request-card {
@@ -440,6 +444,8 @@ onUnmounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.2s;
   position: relative;
+  width: 100%; /* Ensure cards take full width */
+  box-sizing: border-box; /* Include padding in width */
 }
 
 .request-card:hover {
@@ -471,20 +477,60 @@ onUnmounted(() => {
   background: #a1a1a1;
 }
 
+.filter-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  flex-wrap: wrap; /* Allow buttons to wrap on mobile */
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
+  .cart-view {
+    width: 100vw; /* Full viewport width on mobile */
+    max-width: 100vw;
+    padding: 0; /* Remove any padding that might cause gaps */
+    margin: 0;
+  }
+  
   .requests-container {
     max-height: 60vh;
+    width: 100vw; /* Full width on mobile */
+    max-width: 100vw;
+    padding: 0 1rem 0.5rem 1rem; /* Balanced padding */
+    margin: 0;
   }
   
   .request-card {
     padding: 1rem;
+    width: 100%; /* Full width */
+    margin: 0;
   }
   
+  /* Fix filter buttons for mobile */
+  .filter-buttons {
+    flex-direction: column; /* Stack buttons vertically on mobile */
+    gap: 0.5rem;
+    padding: 0 1rem; /* Add side padding */
+  }
+  
+  /* Ensure all direct children of cart-view are full width */
+  .cart-view > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
 }
-.filter-buttons{
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .request-card {
+    padding: 0.75rem;
+  }
+  
+  .requests-container {
+    padding: 0 0.75rem 0.5rem 0.75rem;
+  }
 }
 </style>
