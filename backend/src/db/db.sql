@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS `makerspace`.`missing` (
   `student` VARCHAR(45) NOT NULL,
   `class` VARCHAR(45) NOT NULL,
   `model` VARCHAR(60) NOT NULL,
-  `description` VARCHAR(60) NOT NULL,
+  `description` VARCHAR(255) NOT NULL,
   `quantity` INT NOT NULL,
   `timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

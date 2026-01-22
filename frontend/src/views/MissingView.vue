@@ -89,12 +89,22 @@
                   </template>
                 </Column>
 
-                <!-- Description Column -->
-                <Column field="description" header="Description" :sortable="true">
-                  <template #body="{ data }">
-                    <span class="text-surface-600">{{ data.description || 'No description' }}</span>
-                  </template>
-                </Column>
+                <!-- link Column -->
+        <Column field="link" header="Link" :sortable="true">
+          <template #body="{ data }">
+            <a v-if="data.description" 
+              :href="data.description" 
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary hover:underline font-medium">
+              {{data.model || 'View Link' }}
+              <i class="pi pi-external-link ml-1 text-xs"></i>
+            </a>
+            <span v-else class="text-surface-600 italic">
+              No link
+            </span>
+          </template>
+        </Column>
 
                 <!-- Student Email Column -->
                 <Column field="student" header="Student Email" :sortable="true" />
@@ -207,7 +217,6 @@
                   <div class="text-xs text-surface-600 space-y-1">
                     <div>ID: {{ selectedMissingItem.id }}</div>
                     <div>Model: {{ selectedMissingItem.model }}</div>
-                    <div v-if="selectedMissingItem.description">Description: {{ selectedMissingItem.description }}</div>
                     <div>Student: {{ selectedMissingItem.student }}</div>
                     <div>Class: {{ selectedMissingItem.class }}</div>
                     <div>Quantity: {{ selectedMissingItem.quantity }}</div>

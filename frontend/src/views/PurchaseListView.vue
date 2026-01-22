@@ -46,7 +46,7 @@
                 label="Export CSV"
                 icon="pi pi-file-export" 
                 class="ml-4"
-                @click="exportCSV(filteredPurchaseList, 'purchase_list_export.csv')"
+                @click="exportCSV(filteredRequests, 'requests_export.csv')"
               />
             </div>
           </div>
@@ -113,7 +113,7 @@
                 </Column>
 
                 <!-- Needed to Purchase Column -->
-                <Column field="needed_to_purchase" header="minimum purchase qty" :sortable="true">
+                <Column field="needed_to_purchase" header="Minimum Purchase qty" :sortable="true">
                   <template #body="{ data }">
                     <Badge 
                       :value="data.needed_to_purchase" 
@@ -179,7 +179,7 @@ import { exportCSV } from '@/utils/exportCSV.js'
 
 const router = useRouter()
 const toast = useToast()
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
+const baseURL = import.meta.env.VITE_API_URL
 
 // State
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
@@ -404,6 +404,9 @@ const getStatusSeverity = (needed, stock) => {
   
   .grid {
     grid-template-columns: 1fr;
+  }
+  .card.mb-6 {
+    margin-bottom: 1rem !important; 
   }
 }
 </style>

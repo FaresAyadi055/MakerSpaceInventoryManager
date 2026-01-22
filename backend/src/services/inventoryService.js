@@ -38,20 +38,20 @@ class InventoryService {
   // Create new inventory item
   async createInventoryItem(itemData) {
     try {
-      const { id, model, description, quantity, location } = itemData;
+      const { id, model, description, quantity, location, link } = itemData;
       
       // Validate required fields
-      if (!model || !description || quantity === undefined || !location) {
+      if (!model || !description || quantity === undefined || !location || !link) {
         return { 
           success: false, 
-          error: 'Missing required fields: model, description, quantity, location',
+          error: 'Missing required fields: model, description, quantity, location, link',
           status: 400 
         };
       }
       
       const [result] = await pool.query(
-        'INSERT INTO inventory (model, description, quantity, location) VALUES (?, ?, ?, ?)',
-        [model, description, quantity, location]
+        'INSERT INTO inventory (model, description, quantity, location, link) VALUES (?, ?, ?, ?, ?)',
+        [model, description, quantity, location, link]
       );
       
       const newItem = {
@@ -59,7 +59,8 @@ class InventoryService {
         model,
         description,
         quantity,
-        location
+        location,
+        link
       };
       
       return { success: true, data: newItem, status: 201 };
@@ -78,7 +79,7 @@ class InventoryService {
   // Update inventory item
   async updateInventoryItem(id, updateData) {
     try {
-      const { model, description, quantity, location } = updateData;
+      const { model, description, quantity, location, link } = updateData;
       
       // Check if item exists
       const [existing] = await pool.query(
@@ -110,13 +111,17 @@ class InventoryService {
         updates.push('location = ?');
         values.push(location);
       }
+      if (link !== undefined) {
+        updates.push('link = ?');
+        values.push(link);
+      }
       
       if (updates.length === 0) {
         return { success: false, error: 'No fields to update', status: 400 };
       }
       
       values.push(id);
-      
+    
       const query = `UPDATE inventory SET ${updates.join(', ')} WHERE id = ?`;
       
       await pool.query(query, values);

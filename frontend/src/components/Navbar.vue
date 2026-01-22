@@ -15,16 +15,6 @@
       <div class="navbar-menu">
         <ul class="nav-links">
           <!-- Home Link (always visible) -->
-          <li class="nav-item">
-            <router-link 
-              to="/home" 
-              class="nav-link"
-              active-class="active"
-            >
-              <i class="pi pi-list-check mr-2"></i>
-              <span>Inventory</span>
-            </router-link>
-          </li>
           
           <!-- Admin Links (only for admins) -->
           <li 
@@ -344,7 +334,7 @@ const logout = async () => {
     
     // 5. Force page reload to completely clear Magic state
     setTimeout(() => {
-      window.location.href = '/login'
+      window.location.href = '/'
     }, 500)
     
   } catch (error) {

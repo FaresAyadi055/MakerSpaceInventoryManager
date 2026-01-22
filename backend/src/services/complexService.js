@@ -10,7 +10,7 @@ class ComplexServices {
     i.quantity as stock,
     COALESCE(r.request_count, 0) as request_count,
     COALESCE(r.total_requested, 0) as total_requested,
-    i.location,
+    i.\`location\`,
     CASE 
         WHEN COALESCE(r.total_requested, 0) > i.quantity 
         THEN COALESCE(r.total_requested, 0) - i.quantity 
@@ -22,7 +22,7 @@ LEFT JOIN (
         model_id,
         COUNT(*) as request_count,
         SUM(quantity) as total_requested
-    FROM requests
+    FROM \`requests\`
     GROUP BY model_id
 ) r ON i.id = r.model_id
 WHERE r.model_id IS NOT NULL

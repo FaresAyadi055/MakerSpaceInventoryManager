@@ -92,8 +92,8 @@
                       <span class="font-medium">{{ request.model}}</span>
                     </div>
                     <div v-if="request.description" class="flex items-center justify-between">
-                      <span class="text-surface-600">Description:</span>
-                      <span class="font-medium text-right">{{ request.description }}</span>
+                      <span class="text-surface-600">Link:</span>
+                      <span class="font-medium text-right"><a :href="request.description" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium">{{request.model || 'View Link' }} <i class="pi pi-external-link ml-1 text-xs"></i></a></span>
                     </div>
                   </div>
 
@@ -422,7 +422,16 @@ onUnmounted(() => {
 <style scoped>
 .cart-view {
   min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden; /* Prevent horizontal scroll */
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  box-sizing: border-box; /* Include padding in width calculation */
+}
+
+/* Container to prevent any horizontal overflow */
+.cart-view > * {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .requests-container {
@@ -431,6 +440,9 @@ onUnmounted(() => {
   gap: 1rem;
   overflow-y: auto;
   padding-right: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%; /* Prevent overflow */
 }
 
 .request-card {
@@ -440,6 +452,10 @@ onUnmounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.2s;
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%; /* Prevent overflow */
+  overflow: hidden; /* Contain any overflowing content */
 }
 
 .request-card:hover {
@@ -450,6 +466,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  max-width: 100%;
+}
+
+/* Force all content inside request cards to wrap */
+.request-card * {
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Scrollbar styling */
@@ -471,20 +495,155 @@ onUnmounted(() => {
   background: #a1a1a1;
 }
 
+/* FIXED: Filter buttons - properly responsive */
+.filter-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem; /* Reduced gap for mobile */
+  width: 100%;
+  flex-wrap: nowrap; /* Keep buttons in a row */
+  overflow-x: auto; /* Allow horizontal scroll for buttons if needed */
+  padding-bottom: 0.5rem; /* Space for scrollbar */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Individual button styling */
+.filter-buttons button,
+.filter-buttons .p-button {
+  flex: 1; /* Make buttons take equal space */
+  min-width: 0; /* Allow buttons to shrink */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.85rem; /* Smaller font on mobile */
+  padding: 0.5rem 0.75rem;
+}
+
+/* Hide scrollbar for buttons when not scrolling */
+.filter-buttons::-webkit-scrollbar {
+  height: 3px;
+}
+
+.filter-buttons::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.filter-buttons::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
+  .cart-view {
+    width: 100vw;
+    max-width: 100vw;
+    padding: 0;
+    margin: 0;
+    position: relative;
+    left: 0;
+    right: 0;
+  }
+  
+  /* Nuclear option to kill horizontal scroll */
+  body, html {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  
   .requests-container {
     max-height: 60vh;
+    width: 100vw;
+    max-width: 100vw;
+    padding: 0 0.75rem 0.5rem 0.75rem;
+    margin: 0;
+    overflow-x: hidden; /* Prevent horizontal scroll in container */
   }
   
   .request-card {
-    padding: 1rem;
+    padding: 0.75rem;
+    width: 100%;
+    margin: 0;
+    border-radius: 0.375rem;
   }
   
+  /* FIXED: Button layout for mobile */
+  .filter-buttons {
+    display: grid !important; /* Use grid for better control */
+    grid-template-columns: repeat(3, 1fr); /* 3 equal columns */
+    gap: 0.375rem; /* Smaller gap */
+    padding: 0 0.75rem 0.75rem 0.75rem;
+    overflow-x: visible; /* No scroll needed with grid */
+    flex-wrap: nowrap;
+  }
+  
+  .filter-buttons button,
+  .filter-buttons .p-button {
+    width: 100%;
+    min-width: 0;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.8rem;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* Ensure all content fits */
+  .cart-view > * {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    box-sizing: border-box;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  
+  /* Fix any PrimeVue components */
+  :deep(.p-button) {
+    max-width: 100%;
+  }
+  
+  :deep(.p-element) {
+    max-width: 100%;
+  }
 }
-.filter-buttons{
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+
+/* Extra small devices (very narrow phones) */
+@media (max-width: 480px) {
+  .request-card {
+    padding: 0.5rem;
+  }
+  
+  .requests-container {
+    padding: 0 0.5rem 0.5rem 0.5rem;
+  }
+  
+  /* Adjust buttons for very small screens */
+  .filter-buttons {
+    grid-template-columns: 1fr; /* Stack buttons vertically */
+    gap: 0.25rem;
+    padding: 0 0.5rem 0.5rem 0.5rem;
+  }
+  
+  .filter-buttons button,
+  .filter-buttons .p-button {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
 }
-</style>
+
+/* Small tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+  .filter-buttons {
+    gap: 0.5rem;
+    padding: 0 1rem 1rem 1rem;
+  }
+  
+  .filter-buttons button,
+  .filter-buttons .p-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+}
+</style>  

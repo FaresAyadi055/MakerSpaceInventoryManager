@@ -56,9 +56,9 @@ class InventoryController {
       
       let query;
       if (isAdmin) {
-        query = 'SELECT id, model, description, quantity, location FROM inventory ORDER BY id DESC';
+        query = 'SELECT id, model, description, quantity, location, link FROM inventory ORDER BY id DESC';
       } else {
-        query = 'SELECT id, model, description, quantity FROM inventory ORDER BY id DESC';
+        query = 'SELECT id, model, description, quantity, link FROM inventory ORDER BY id DESC';
       }
       
       const [rows] = await pool.query(query);
