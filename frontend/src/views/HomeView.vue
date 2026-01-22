@@ -165,13 +165,9 @@
                         icon="pi pi-shopping-cart" 
                         class="request-button"
                         @click.stop="openRequestDialog(item)"
-                        :disabled="item.quantity === 0"
-                        :severity="item.quantity === 0 ? 'secondary' : 'success'"
+                        severity='success'
                         size="small"
                       />
-                      <p v-if="item.quantity === 0" class="out-of-stock-note">
-                        This item is currently out of stock. You can request it to be restocked.
-                      </p>
                     </div>
                     
                     <!-- Additional Item Details -->
