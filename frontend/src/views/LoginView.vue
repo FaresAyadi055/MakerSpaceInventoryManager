@@ -81,13 +81,23 @@ const isMagicEnabled = ref(import.meta.env.VITE_MAGIC_ENABLED === 'true' || impo
 const email = ref('')
 const loading = ref(false)
 const emailError = ref('')
+const magicInitialized = ref(false)
 
-// Initialize Magic
+// Initialize Magic with proper error handling
 const initMagic = () => {
   if (isMagicEnabled.value && import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY) {
     try {
-      magic = new Magic(import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY)
-      console.log('Magic SDK initialized')
+      magic = new Magic(import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY, {
+        network: 'mainnet',
+        locale: 'en',
+        // DISABLE auto refresh to prevent 401 errors
+        tokenRenewal: false,
+        autoRefreshToken: false,
+        endpoint: 'https://api.magic.link'
+      })
+      
+      console.log('✅ Magic SDK initialized')
+      magicInitialized.value = true
       
       // Store globally for logout
       window.magic = magic
@@ -98,27 +108,38 @@ const initMagic = () => {
         console.log('Force logging out from Magic...')
         magic.user.logout().finally(() => {
           sessionStorage.removeItem('force_magic_logout')
-          // Clear any remaining Magic tokens
           clearMagicStorage()
         })
       }
       
     } catch (error) {
-      console.error('Failed to initialize Magic SDK:', error)
+      console.error('❌ Failed to initialize Magic SDK:', error)
+      magicInitialized.value = false
+      // Fallback to backend-only auth
+      toast.add({
+        severity: 'warn',
+        summary: 'Magic SDK Failed',
+        detail: 'Using fallback authentication',
+        life: 3000
+      })
     }
+  } else {
+    console.log(' Magic SDK disabled, using backend-only auth')
+    magicInitialized.value = false
   }
 }
 
 // Clear all Magic-related storage
 const clearMagicStorage = () => {
+  console.log('🧹 Clearing Magic storage...')
   // Clear Magic localStorage keys
   const magicKeys = Object.keys(localStorage).filter(key => 
     key.startsWith('__magic') || 
     key.startsWith('magic_') || 
-    key.includes('did') ||
-    key.includes('DID') ||
+    key.includes('did:') ||
     key.includes('oauth')
   )
+  
   magicKeys.forEach(key => {
     console.log('Removing Magic key:', key)
     localStorage.removeItem(key)
@@ -153,7 +174,7 @@ const validateEmail = () => {
   return true
 }
 
-// Main login function
+// Main login function with retry logic
 const loginWithMagic = async () => {
   if (!validateEmail()) return
   
@@ -161,25 +182,60 @@ const loginWithMagic = async () => {
   emailError.value = ''
   
   try {
-    // First, ensure we're logged out from any existing Magic session
-    if (magic) {
-      try {
-        const isLoggedIn = await magic.user.isLoggedIn()
-        if (isLoggedIn) {
-          console.log('Existing Magic session found, logging out...')
-          await magic.user.logout()
-          clearMagicStorage()
-        }
-      } catch (error) {
-        console.log('Error checking Magic session:', error)
-      }
+    // First, clear any existing Magic sessions to prevent conflicts
+    clearMagicStorage()
+    
+    // If Magic SDK is not initialized or failed, use backend-only
+    if (!magicInitialized.value || !magic) {
+      console.log(' Magic SDK not available, using backend-only login')
+      return await loginWithBackendOnly()
     }
     
-    // Start new Magic login
-    const didToken = await magic.auth.loginWithEmailOTP({
-      email: email.value,
-      showUI: true
-    })
+    // Try Magic login with retry for 401 errors
+    let didToken
+    let attempts = 0
+    const maxAttempts = 2
+    
+    while (attempts < maxAttempts) {
+      attempts++
+      console.log(` Magic login attempt ${attempts}/${maxAttempts}`)
+      
+      try {
+        // Clear any stale sessions before each attempt
+        if (attempts > 1) {
+          await magic.user.logout().catch(() => {})
+          clearMagicStorage()
+          await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1s
+        }
+        
+        didToken = await magic.auth.loginWithEmailOTP({
+          email: email.value,
+          showUI: true,
+          redirectURI: window.location.origin + '/callback'
+        })
+        
+        console.log(' Magic login successful')
+        break // Success, exit loop
+        
+      } catch (magicError) {
+        console.error(` Magic attempt ${attempts} failed:`, magicError.message)
+        
+        // If it's a 401/refresh error and we have attempts left, retry
+        const isRefreshError = magicError.message.includes('401') || 
+                               magicError.message.includes('Unauthorized') ||
+                               magicError.code === -32000 ||
+                               magicError.code === -10000
+        
+        if (isRefreshError && attempts < maxAttempts) {
+          console.log(' Magic refresh error, retrying...')
+          continue
+        }
+        
+        // If all attempts failed or it's not a refresh error, fallback
+        console.log(' Magic failed, falling back to backend-only')
+        return await loginWithBackendOnly()
+      }
+    }
     
     // Verify with backend
     const response = await fetch(apiUrl + '/auth/magic/verify', {
@@ -195,24 +251,35 @@ const loginWithMagic = async () => {
     if (data.success) {
       handleLoginSuccess(data.data)
     } else {
-      throw new Error(data.message || 'Login failed')
+      throw new Error(data.message || 'Login verification failed')
     }
     
   } catch (error) {
-    console.error('Login error:', error)
+    console.error(' Login error:', error)
     
-    if (error.message?.includes('user denied') || error.code === -10000) {
+    // Check for specific error types
+    if (error.message.includes('user denied') || error.code === -10000) {
       toast.add({
         severity: 'info',
         summary: 'Login Cancelled',
-        detail: 'You can try again',
+        detail: 'You closed the login popup',
         life: 3000
       })
+    } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Session Issue',
+        detail: 'Authentication issue. Please try again.',
+        life: 3000
+      })
+      // Clear everything and reload
+      clearMagicStorage()
+      setTimeout(() => window.location.reload(), 1000)
     } else {
       toast.add({
         severity: 'error',
         summary: 'Login Failed',
-        detail: error.message || 'Failed to start login process',
+        detail: error.message || 'Failed to login',
         life: 3000
       })
     }
@@ -221,11 +288,68 @@ const loginWithMagic = async () => {
   }
 }
 
+// Fallback: Backend-only login (no Magic)
+const loginWithBackendOnly = async () => {
+  try {
+    console.log('🔄 Using backend-only login fallback')
+    
+    // Request verification code from backend
+    const requestResponse = await fetch(apiUrl + '/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email: email.value })
+    })
+    
+    const requestData = await requestResponse.json()
+    
+    if (requestData.success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Fallback Mode',
+        detail: 'Using email verification (Magic unavailable)',
+        life: 3000
+      })
+      
+      // Show code input UI (you'll need to implement this)
+      // For now, just show the code if in debug mode
+      if (requestData.debugCode) {
+        toast.add({
+          severity: 'info',
+          summary: 'Debug Code',
+          detail: `Code: ${requestData.debugCode}`,
+          life: 5000
+        })
+      }
+      
+      // You would normally switch to code input UI here
+      // For now, just inform user
+      toast.add({
+        severity: 'info',
+        summary: 'Check Email',
+        detail: 'Please check your email for the verification code',
+        life: 3000
+      })
+      
+    } else {
+      throw new Error(requestData.message || 'Backend login failed')
+    }
+    
+  } catch (error) {
+    console.error(' Backend-only login error:', error)
+    throw error
+  }
+}
+
 // Handle successful login
 const handleLoginSuccess = (data) => {
   // Save token and user data
   localStorage.setItem('token', data.token)
   localStorage.setItem('user', JSON.stringify(data.user))
+  
+  // Clear Magic storage on successful login
+  clearMagicStorage()
   
   toast.add({
     severity: 'success',
@@ -242,6 +366,10 @@ const handleLoginSuccess = (data) => {
 
 // Initialize
 onMounted(() => {
+  // Clear any existing sessions first
+  clearMagicStorage()
+  
+  // Initialize Magic
   initMagic()
   
   // Check if we're coming from a logout
@@ -254,6 +382,11 @@ onMounted(() => {
     }
     sessionStorage.removeItem('from_logout')
   }
+  
+  // Add a small delay to let Magic SDK settle
+  setTimeout(() => {
+    console.log(' Login ready, Magic initialized:', magicInitialized.value)
+  }, 500)
 })
 </script>
 <style scoped>
