@@ -29,7 +29,7 @@ const app = createApp(App)
 // warming up the backend to save user wait time on first request
 const wakeUpBackend = async () => {
   try {
-    await axios.get(`${import.meta.env.VITE_API_BASE_URL}/health`)
+    await axios.get(`${import.meta.env.VITE_API_URL}/health`)
     console.log('Backend is awake')
   } catch (error) {
     console.error('Error waking up backend:', error)
