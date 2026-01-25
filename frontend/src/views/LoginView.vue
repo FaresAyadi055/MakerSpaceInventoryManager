@@ -9,8 +9,8 @@
         <p class="text-surface-600 mt-2">Sign in with your school email</p>
       </div>
 
-      <!-- Single Email Input Form -->
-      <div class="space-y-6">
+      <!-- Email Input Step -->
+      <div v-if="step === 'email'" class="space-y-6">
         <div class="field">
           <label for="email" class="block text-sm font-medium text-surface-700 mb-2">
             School Email
@@ -23,7 +23,7 @@
             size="large"
             class="w-full"
             :invalid="!!emailError"
-            @keyup.enter="loginWithMagic"
+            @keyup.enter="requestOTP"
           />
           <small class="text-red-500 mt-1 block" v-if="emailError">{{ emailError }}</small>
           <div class="text-sm text-surface-600 mt-2">
@@ -34,25 +34,83 @@
         </div>
 
         <Button
-          label="Verify Email"
+          label="Send Verification Code"
           size="large"
           class="w-full"
           :loading="loading"
-          @click="loginWithMagic"
+          @click="requestOTP"
         />
-
+        
         <div class="text-center">
           <p class="text-sm text-surface-600">
-            You'll receive a 6-digit code to verify your email
+            You'll receive a 6-digit code in your email
           </p>
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="loading" class="mt-6 p-6 bg-blue-50 rounded-lg border border-blue-200 text-center">
-        <div class="flex items-center justify-center">
-          <i class="pi pi-spin pi-spinner text-2xl text-blue-500 mr-3"></i>
-          <span class="text-blue-700">Sending verification code...</span>
+      <!-- OTP Input Step -->
+      <div v-if="step === 'otp'" class="space-y-6">
+        <div class="text-center">
+          <div class="mb-4">
+            <i class="pi pi-envelope text-4xl text-primary-500 mb-2"></i>
+            <p class="font-medium text-surface-900">Check Your Email</p>
+            <p class="text-sm text-surface-600">{{ email }}</p>
+          </div>
+          
+          <p class="text-surface-700 mb-2">
+            Enter the 6-digit code sent to your email
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="otp" class="block text-sm font-medium text-surface-700 mb-2">
+            Verification Code
+          </label>
+          <InputText
+            id="otp"
+            v-model="otpCode"
+            type="text"
+            placeholder="123456"
+            maxlength="6"
+            size="large"
+            class="w-full text-center text-2xl tracking-widest"
+            @keyup.enter="verifyOTP"
+          />
+          <small class="text-surface-500 mt-2 block">
+            Enter the 6-digit code from your email
+          </small>
+        </div>
+
+        <div class="flex gap-3">
+          <Button
+            label="Back"
+            severity="secondary"
+            size="large"
+            class="flex-1"
+            @click="step = 'email'"
+            :disabled="loading"
+          />
+          <Button
+            label="Verify & Login"
+            size="large"
+            class="flex-1"
+            :loading="loading"
+            @click="verifyOTP"
+          />
+        </div>
+
+        <div class="text-center">
+          <p class="text-sm text-surface-600">
+            Didn't receive the code?
+            <Button
+              label="Resend"
+              text
+              size="small"
+              class="p-0 ml-1"
+              @click="resendOTP"
+              :disabled="loading"
+            />
+          </p>
         </div>
       </div>
     </div>
@@ -82,78 +140,220 @@ const email = ref('')
 const loading = ref(false)
 const emailError = ref('')
 const magicInitialized = ref(false)
+const step = ref('email') // Add step state for OTP flow
+const otpCode = ref('') // Add OTP code state
+const otpSent = ref(false) // Track if OTP was sent
 
-// Initialize Magic with proper error handling
+// Initialize Magic WITHOUT iframe/popup mode
 const initMagic = () => {
   if (isMagicEnabled.value && import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY) {
     try {
       magic = new Magic(import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY, {
         network: 'mainnet',
         locale: 'en',
-        // DISABLE auto refresh to prevent 401 errors
-        tokenRenewal: false,
-        autoRefreshToken: false,
-        endpoint: 'https://api.magic.link'
+        // ⚠️ CRITICAL: Use headless mode to avoid iframe issues
+        testMode: process.env.NODE_ENV === 'development',
+        // Disable features that use iframes
+        overlay: false
       })
       
-      console.log('✅ Magic SDK initialized')
+      console.log('✅ Magic SDK initialized (headless mode)')
       magicInitialized.value = true
-      
-      // Store globally for logout
-      window.magic = magic
-      
-      // Check if we should force logout (when coming from logout action)
-      const forceLogout = sessionStorage.getItem('force_magic_logout')
-      if (forceLogout === 'true') {
-        console.log('Force logging out from Magic...')
-        magic.user.logout().finally(() => {
-          sessionStorage.removeItem('force_magic_logout')
-          clearMagicStorage()
-        })
-      }
       
     } catch (error) {
       console.error('❌ Failed to initialize Magic SDK:', error)
       magicInitialized.value = false
-      // Fallback to backend-only auth
-      toast.add({
-        severity: 'warn',
-        summary: 'Magic SDK Failed',
-        detail: 'Using fallback authentication',
-        life: 3000
-      })
     }
-  } else {
-    console.log(' Magic SDK disabled, using backend-only auth')
-    magicInitialized.value = false
   }
 }
 
-// Clear all Magic-related storage
-const clearMagicStorage = () => {
-  console.log('🧹 Clearing Magic storage...')
-  // Clear Magic localStorage keys
-  const magicKeys = Object.keys(localStorage).filter(key => 
-    key.startsWith('__magic') || 
-    key.startsWith('magic_') || 
-    key.includes('did:') ||
-    key.includes('oauth')
-  )
+// Step 1: Request OTP (headless - no popup)
+const requestOTP = async () => {
+  if (!validateEmail()) return
   
-  magicKeys.forEach(key => {
-    console.log('Removing Magic key:', key)
-    localStorage.removeItem(key)
-  })
+  loading.value = true
+  emailError.value = ''
   
-  // Clear Magic sessionStorage
-  const sessionKeys = Object.keys(sessionStorage).filter(key => 
-    key.startsWith('__magic') || 
-    key.includes('magic')
-  )
-  sessionKeys.forEach(key => {
-    console.log('Removing Magic session key:', key)
-    sessionStorage.removeItem(key)
-  })
+  try {
+    console.log('📧 Requesting OTP for:', email.value)
+    
+    // Use headless OTP - sends email without showing UI
+    await magic.auth.loginWithEmailOTP({
+      email: email.value,
+      showUI: false // ⚠️ NO POPUP - headless mode
+    })
+    
+    console.log('✅ OTP requested successfully')
+    
+    // Switch to OTP input step
+    otpSent.value = true
+    step.value = 'otp'
+    loading.value = false
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Check Your Email',
+      detail: 'We sent a 6-digit code to your email',
+      life: 5000
+    })
+    
+  } catch (error) {
+    console.error('❌ OTP request error:', error)
+    loading.value = false
+    
+    // Handle specific errors
+    if (error.message.includes('rate limit')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Too Many Requests',
+        detail: 'Please wait a few minutes before trying again',
+        life: 3000
+      })
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Failed to Send Code',
+        detail: 'Please try again or contact support',
+        life: 3000
+      })
+    }
+  }
+}
+
+// Step 2: Verify OTP
+const verifyOTP = async () => {
+  if (otpCode.value.length !== 6) {
+    toast.add({
+      severity: 'error',
+      summary: 'Invalid Code',
+      detail: 'Please enter a 6-digit code',
+      life: 3000
+    })
+    return
+  }
+  
+  loading.value = true
+  
+  try {
+    console.log('🔐 Verifying OTP code...')
+    
+    // Complete login with OTP code
+    const didToken = await magic.auth.loginWithEmailOTP({
+      email: email.value,
+      code: otpCode.value
+    })
+    
+    console.log('✅ OTP verified, got DID token')
+    
+    // Verify with backend
+    const response = await fetch(apiUrl + '/auth/magic/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ didToken })
+    })
+    
+    const data = await response.json()
+    
+    if (data.success) {
+      handleLoginSuccess(data.data)
+    } else {
+      throw new Error(data.message || 'Login verification failed')
+    }
+    
+  } catch (error) {
+    console.error('❌ OTP verification error:', error)
+    loading.value = false
+    
+    if (error.message.includes('incorrect') || error.message.includes('invalid')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Invalid Code',
+        detail: 'The verification code is incorrect',
+        life: 3000
+      })
+    } else if (error.message.includes('expired')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Code Expired',
+        detail: 'The code has expired. Please request a new one.',
+        life: 3000
+      })
+      // Reset to email step
+      step.value = 'email'
+      otpSent.value = false
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Verification Failed',
+        detail: 'Could not verify your code. Please try again.',
+        life: 3000
+      })
+    }
+  }
+}
+
+// Alternative: Use email redirect instead of OTP
+const loginWithMagicRedirect = async () => {
+  if (!validateEmail()) return
+  
+  loading.value = true
+  emailError.value = ''
+  
+  try {
+    // Use Magic Link instead of OTP (no iframe needed)
+    const didToken = await magic.auth.loginWithMagicLink({
+      email: email.value,
+      redirectURI: window.location.origin + '/callback'
+    })
+    
+    // If we get here immediately, user was already logged in
+    if (didToken) {
+      await verifyWithBackend(didToken)
+    } else {
+      // Magic link was sent via email
+      toast.add({
+        severity: 'success',
+        summary: 'Check Your Email',
+        detail: 'Click the magic link we sent to your email',
+        life: 5000
+      })
+    }
+    
+  } catch (error) {
+    console.error('❌ Magic Link error:', error)
+    loading.value = false
+    
+    toast.add({
+      severity: 'error',
+      summary: 'Login Failed',
+      detail: 'Could not send magic link. Please try OTP instead.',
+      life: 3000
+    })
+  }
+}
+
+const verifyWithBackend = async (didToken) => {
+  try {
+    const response = await fetch(apiUrl + '/auth/magic/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ didToken })
+    })
+    
+    const data = await response.json()
+    
+    if (data.success) {
+      handleLoginSuccess(data.data)
+    } else {
+      throw new Error(data.message || 'Login verification failed')
+    }
+  } catch (error) {
+    throw error
+  }
 }
 
 // Email validation
@@ -174,182 +374,11 @@ const validateEmail = () => {
   return true
 }
 
-// Main login function with retry logic
-const loginWithMagic = async () => {
-  if (!validateEmail()) return
-  
-  loading.value = true
-  emailError.value = ''
-  
-  try {
-    // First, clear any existing Magic sessions to prevent conflicts
-    clearMagicStorage()
-    
-    // If Magic SDK is not initialized or failed, use backend-only
-    if (!magicInitialized.value || !magic) {
-      console.log(' Magic SDK not available, using backend-only login')
-      return await loginWithBackendOnly()
-    }
-    
-    // Try Magic login with retry for 401 errors
-    let didToken
-    let attempts = 0
-    const maxAttempts = 2
-    
-    while (attempts < maxAttempts) {
-      attempts++
-      console.log(` Magic login attempt ${attempts}/${maxAttempts}`)
-      
-      try {
-        // Clear any stale sessions before each attempt
-        if (attempts > 1) {
-          await magic.user.logout().catch(() => {})
-          clearMagicStorage()
-          await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1s
-        }
-        
-        didToken = await magic.auth.loginWithEmailOTP({
-          email: email.value,
-          showUI: true,
-          redirectURI: window.location.origin + '/callback'
-        })
-        
-        console.log(' Magic login successful')
-        break // Success, exit loop
-        
-      } catch (magicError) {
-        console.error(` Magic attempt ${attempts} failed:`, magicError.message)
-        
-        // If it's a 401/refresh error and we have attempts left, retry
-        const isRefreshError = magicError.message.includes('401') || 
-                               magicError.message.includes('Unauthorized') ||
-                               magicError.code === -32000 ||
-                               magicError.code === -10000
-        
-        if (isRefreshError && attempts < maxAttempts) {
-          console.log(' Magic refresh error, retrying...')
-          continue
-        }
-        
-        // If all attempts failed or it's not a refresh error, fallback
-        console.log(' Magic failed, falling back to backend-only')
-        return await loginWithBackendOnly()
-      }
-    }
-    
-    // Verify with backend
-    const response = await fetch(apiUrl + '/auth/magic/verify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ didToken })
-    })
-    
-    const data = await response.json()
-    
-    if (data.success) {
-      handleLoginSuccess(data.data)
-    } else {
-      throw new Error(data.message || 'Login verification failed')
-    }
-    
-  } catch (error) {
-    console.error(' Login error:', error)
-    
-    // Check for specific error types
-    if (error.message.includes('user denied') || error.code === -10000) {
-      toast.add({
-        severity: 'info',
-        summary: 'Login Cancelled',
-        detail: 'You closed the login popup',
-        life: 3000
-      })
-    } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-      toast.add({
-        severity: 'warn',
-        summary: 'Session Issue',
-        detail: 'Authentication issue. Please try again.',
-        life: 3000
-      })
-      // Clear everything and reload
-      clearMagicStorage()
-      setTimeout(() => window.location.reload(), 1000)
-    } else {
-      toast.add({
-        severity: 'error',
-        summary: 'Login Failed',
-        detail: error.message || 'Failed to login',
-        life: 3000
-      })
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-// Fallback: Backend-only login (no Magic)
-const loginWithBackendOnly = async () => {
-  try {
-    console.log('🔄 Using backend-only login fallback')
-    
-    // Request verification code from backend
-    const requestResponse = await fetch(apiUrl + '/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email: email.value })
-    })
-    
-    const requestData = await requestResponse.json()
-    
-    if (requestData.success) {
-      toast.add({
-        severity: 'success',
-        summary: 'Fallback Mode',
-        detail: 'Using email verification (Magic unavailable)',
-        life: 3000
-      })
-      
-      // Show code input UI (you'll need to implement this)
-      // For now, just show the code if in debug mode
-      if (requestData.debugCode) {
-        toast.add({
-          severity: 'info',
-          summary: 'Debug Code',
-          detail: `Code: ${requestData.debugCode}`,
-          life: 5000
-        })
-      }
-      
-      // You would normally switch to code input UI here
-      // For now, just inform user
-      toast.add({
-        severity: 'info',
-        summary: 'Check Email',
-        detail: 'Please check your email for the verification code',
-        life: 3000
-      })
-      
-    } else {
-      throw new Error(requestData.message || 'Backend login failed')
-    }
-    
-  } catch (error) {
-    console.error(' Backend-only login error:', error)
-    throw error
-  }
-}
-
 // Handle successful login
 const handleLoginSuccess = (data) => {
   // Save token and user data
   localStorage.setItem('token', data.token)
   localStorage.setItem('user', JSON.stringify(data.user))
-  
-  // Clear Magic storage on successful login
-  clearMagicStorage()
   
   toast.add({
     severity: 'success',
@@ -364,29 +393,45 @@ const handleLoginSuccess = (data) => {
   }, 1500)
 }
 
+// Handle callback from Magic Link
+const handleMagicCallback = async () => {
+  const urlParams = new URLSearchParams(window.location.search)
+  const magicCredential = urlParams.get('magic_credential')
+  
+  if (magicCredential && magic) {
+    loading.value = true
+    try {
+      const result = await magic.auth.loginWithCredential(magicCredential)
+      if (result) {
+        await verifyWithBackend(result)
+      }
+    } catch (error) {
+      console.error('Callback error:', error)
+      loading.value = false
+    }
+  }
+}
+
+// Resend OTP
+const resendOTP = () => {
+  otpCode.value = ''
+  step.value = 'email'
+  otpSent.value = false
+  requestOTP()
+}
+
 // Initialize
 onMounted(() => {
-  // Clear any existing sessions first
-  clearMagicStorage()
-  
-  // Initialize Magic
   initMagic()
   
-  // Check if we're coming from a logout
-  const fromLogout = sessionStorage.getItem('from_logout')
-  if (fromLogout === 'true') {
-    console.log('Coming from logout, clearing Magic storage...')
-    clearMagicStorage()
-    if (magic) {
-      magic.user.logout().catch(() => {})
-    }
-    sessionStorage.removeItem('from_logout')
-  }
+  // Handle Magic callback if present
+  handleMagicCallback()
   
-  // Add a small delay to let Magic SDK settle
-  setTimeout(() => {
-    console.log(' Login ready, Magic initialized:', magicInitialized.value)
-  }, 500)
+  // Check URL for callback
+  if (window.location.pathname === '/callback' || 
+      window.location.search.includes('magic_credential')) {
+    handleMagicCallback()
+  }
 })
 </script>
 <style scoped>
