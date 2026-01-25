@@ -2,7 +2,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-
+import axios from 'axios'
 // PrimeVue 4 Setup
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
@@ -26,6 +26,16 @@ import Tag from 'primevue/tag'
 
 
 const app = createApp(App)
+// warming up the backend to save user wait time on first request
+const wakeUpBackend = async () => {
+  try {
+    await axios.get(`${import.meta.env.VITE_API_BASE_URL}/health`)
+    console.log('Backend is awake')
+  } catch (error) {
+    console.error('Error waking up backend:', error)
+  }
+}
+wakeUpBackend()
 
 // Use PrimeVue with Aura theme
 app.use(PrimeVue, {
