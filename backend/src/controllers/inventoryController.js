@@ -57,8 +57,8 @@ class InventoryController {
       
       res.json({
         success: true,
-        count: rows.length,
-        data: rows,
+        count: result.data.length,
+        data: result.data,
         includesLocation: isAdmin
       });
     } catch (error) {
@@ -82,7 +82,7 @@ class InventoryController {
         });
       }
       const isAdmin = await checkIfAdmin(req.headers.authorization);
-      const result = await inventoryService.getInventoryById(parseInt(id,isAdmin));
+      const result = await inventoryService.getInventoryById(parseInt(id),isAdmin);
       
       if (!result.success) {
         return res.status(result.status || 404).json({
