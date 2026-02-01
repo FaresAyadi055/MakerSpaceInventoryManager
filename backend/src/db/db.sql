@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS `makerspace`.`inventory` (
   `description` VARCHAR(60) NOT NULL,
   `quantity` INT NOT NULL,
   `location` VARCHAR(45) NOT NULL,
+  `link` VARCHAR(255) DEFAULT "no link",
   PRIMARY KEY (`id`),
   UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE)
 ENGINE = InnoDB

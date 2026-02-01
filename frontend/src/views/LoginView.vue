@@ -68,13 +68,22 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
+import axios from 'axios'
 import Toast from 'primevue/toast'
 import { Magic } from 'magic-sdk'
 
 const router = useRouter()
 const toast = useToast()
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
-
+const wakeUpBackend = async () => {
+  try {
+    await axios.get(`${import.meta.env.STATUS_CHECK_URL}`)
+    console.log('Backend is awake')
+  } catch (error) {
+    console.error('Error waking up backend:', error)
+  }
+}
+wakeUpBackend()
 // Magic SDK instance
 let magic = null
 const isMagicEnabled = ref(import.meta.env.VITE_MAGIC_ENABLED === 'true' || import.meta.env.PROD)

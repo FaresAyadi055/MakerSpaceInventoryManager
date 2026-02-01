@@ -338,7 +338,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, transformVNodeArgs } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
@@ -614,7 +614,69 @@ const approveRequest = (request) => {
   selectedRequest.value = request
   approveSelectedRequest()
 }
+const getItem = async (id) => {
+  try {
+    const response = await fetch(`${apiUrl}/inventory/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))     
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (data.success && data.data) {
+      return data.data
+    } else {
+      throw new Error(data.message || 'Failed to get quantity')
+    }
+  } catch (error) {
+    console.error('Error getting quantity:', error)
+    throw error
+  }
+    }
+const updateItem = async (data) => {
+   try {
+    const response = await fetch(`${apiUrl}/inventory/${data.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(data)
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+    }
+
+    const responseData = await response.json()
+
+    if (responseData.success) {
+      toast.add({
+        severity: 'success',
+        summary: 'Request Approved',
+        detail: 'Request has been approved successfully',
+        life: 3000
+      })
+    } else {
+      throw new Error(responseData.message || 'Failed to update quantity')
+    }
+  } catch (error) {
+    console.error('Error updating quantity:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Update Failed',
+      detail: error.message || 'Failed to update quantity',
+      life: 5000
+    })
+  }
+    }
 const approveSelectedRequest = () => {
   if (!selectedRequest.value) {
     toast.add({
@@ -625,19 +687,37 @@ const approveSelectedRequest = () => {
     })
     return
   }
-
+  
   const request = selectedRequest.value
   showConfirmation(
     'approve',
-    `Are you sure you want to approve this request from ${request.student_email}? This will add it to logs and remove it from requests.`,
+    `Are you sure you want to approve this request from ${request.student_email}? This will add it to logs and update inventory.`,
     'success',
     async () => {
       approvingRequest.value = true
       
       try {
-        // Step 1: Create log entry
+        // Step 1: Check if item exists and has sufficient quantity
+        let inventoryItem
+        try {
+          inventoryItem = await getItem(request.model_id)
+        } catch (error) {
+          throw new Error(`Item with Model ID ${request.model_id} not found in inventory`)
+        }
+        
+        // Check if sufficient quantity is available
+        const currentQuantity = inventoryItem.quantity || 0
+        const requestedQuantity = request.quantity || 0
+        
+        if (currentQuantity < requestedQuantity) {
+          throw new Error(
+            `Insufficient inventory! Available: ${currentQuantity}, Requested: ${requestedQuantity}`
+          )
+        }
+        
+        // Step 2: Create log entry
         const logData = {
-          model_id: request.id,
+          model_id: request.model_id,
           student_email: request.student_email,
           class_name: request.class,
           quantity: request.quantity
@@ -665,7 +745,20 @@ const approveSelectedRequest = () => {
           throw new Error(logResult.message || 'Failed to create log entry')
         }
         
-        // Step 2: Delete the request
+        // Step 3: Update inventory quantity (subtract requested quantity)
+        const updatedInventoryData = {
+          id: inventoryItem.id,
+          model: inventoryItem.model,
+          description: inventoryItem.description,
+          category: inventoryItem.category,
+          quantity: currentQuantity - requestedQuantity,
+          location: inventoryItem.location,
+          last_updated: new Date().toISOString()
+        }
+        
+        await updateItem(updatedInventoryData)
+        
+        // Step 4: Delete the request
         const deleteResponse = await fetch(`${apiUrl}/requests/${request.id}`, {
           method: 'DELETE',
           headers: {
@@ -674,27 +767,23 @@ const approveSelectedRequest = () => {
         })
 
         if (!deleteResponse.ok) {
-          // Even if delete fails, the log was created - we should still show success
-          console.warn('Log created but failed to delete request')
+          // Even if delete fails, log was created and inventory updated
+          console.warn('Log created and inventory updated but failed to delete request')
         }
         
         const deleteResult = await deleteResponse.json().catch(() => ({ success: false }))
         
-        // Step 3: Update UI
-        if (logResult.success) {
-          toast.add({
-            severity: 'success',
-            summary: 'Request Approved',
-            detail: 'Request has been approved and added to logs',
-            life: 3000
-          })
-          
-          // Remove from local data
-          requests.value = requests.value.filter(r => r.id !== request.id)
-          selectedRequest.value = null
-        } else {
-          throw new Error('Failed to process approval')
-        }
+        // Step 5: Update UI
+        toast.add({
+          severity: 'success',
+          summary: 'Request Approved',
+          detail: `Request approved. Inventory updated: ${currentQuantity} → ${currentQuantity - requestedQuantity}`,
+          life: 4000
+        })
+        
+        // Remove from local data
+        requests.value = requests.value.filter(r => r.id !== request.id)
+        selectedRequest.value = null
         
       } catch (error) {
         console.error('Error approving request:', error)

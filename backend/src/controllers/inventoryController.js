@@ -98,7 +98,6 @@ class InventoryController {
           message: result.error
         });
       }
-      
       res.json({
         success: true,
         data: result.data

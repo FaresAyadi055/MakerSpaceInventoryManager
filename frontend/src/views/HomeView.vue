@@ -165,13 +165,9 @@
                         icon="pi pi-shopping-cart" 
                         class="request-button"
                         @click.stop="openRequestDialog(item)"
-                        :disabled="item.quantity === 0"
-                        :severity="item.quantity === 0 ? 'secondary' : 'success'"
+                        severity='success'
                         size="small"
                       />
-                      <p v-if="item.quantity === 0" class="out-of-stock-note">
-                        This item is currently out of stock. You can request it to be restocked.
-                      </p>
                     </div>
                     
                     <!-- Additional Item Details -->
@@ -484,7 +480,7 @@
         <br/>
         
         <div class="flex-order-1 w-full">
-          <label for="modelName" class="font-bold block mb-2">Model Name</label>
+          <label for="modelName" class="font-bold block mb-2">Model Name </label>
           <InputText 
             id="modelName"
             v-model="missingrequestForm.model"
@@ -492,18 +488,8 @@
           />
         </div>
         <br/>
-
         <div class="flex-order-2 w-full">
-          <label for="imageLink" class="font-bold block mb-2">Image Link</label>
-          <InputText 
-            id="imageLink"
-            v-model="missingrequestForm.image_link"
-            placeholder="Paste image URL here"
-          />
-        </div>
-        <br/>
-        <div class="flex-order-2 w-full">
-          <label for="description" class="font-bold block mb-2">Product Link</label>
+          <label for="description" class="font-bold block mb-2">Product Link </label>
           <InputText 
             id="description"
             v-model="missingrequestForm.description"
@@ -512,7 +498,7 @@
         </div>
         <br/>
         <div class="flex-1 min-w-[200px]">
-          <label for="quantity" class="font-bold block mb-2">Quantity</label>
+          <label for="quantity" class="font-bold block mb-2">Quantity </label>
           <InputNumber 
             id="quantity"
             v-model="missingrequestForm.quantity"
@@ -522,7 +508,7 @@
         </div>
         <br/>
         <div class="flex-1 min-w-[200px]">
-          <label for="studentEmail" class="font-bold block mb-2">Student Email</label>
+          <label for="studentEmail" class="font-bold block mb-2">Student Email </label>
           <InputText 
             id="studentEmail"
             v-model="missingrequestForm.student_email"
@@ -1056,7 +1042,6 @@ const submitMissing = async () => {
   const requestData = {
     model: missingrequestForm.value.model?.trim(),  
     model_description: missingrequestForm.value.description?.trim(),
-    image_link: missingrequestForm.value.image_link?.trim(),
     student_email: missingrequestForm.value.student_email?.trim() || userEmail.value,
     class_name: `${missingrequestForm.value.class_prefix} G${missingrequestForm.value.class_number}`,
     quantity: missingrequestForm.value.quantity
