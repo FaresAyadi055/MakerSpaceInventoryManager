@@ -3,12 +3,15 @@ import pool from '../db/pool.js';
 
 class InventoryService {
   // Get all inventory items
-  async getAllInventory() {
+  async getAllInventory(isAdmin) {
     try {
-      const [rows] = await pool.query(`
-        SELECT * FROM inventory 
-        ORDER BY id DESC
-      `);
+            let query;
+      if (isAdmin) {
+        query = 'SELECT id, model, description, quantity, location, link FROM inventory ORDER BY id DESC';
+      } else {
+        query = 'SELECT id, model, description, quantity, link FROM inventory ORDER BY id DESC';
+      }
+      const [rows] = await pool.query(query);
       return { success: true, data: rows };
     } catch (error) {
       console.error('Error getting inventory:', error);
@@ -17,12 +20,15 @@ class InventoryService {
   }
 
   // Get inventory item by ID
-  async getInventoryById(id) {
+  async getInventoryById(id,isAdmin) {
     try {
-      const [rows] = await pool.query(
-        'SELECT * FROM inventory WHERE id = ?',
-        [id]
-      );
+      let query;
+        if (isAdmin) {
+        query = 'SELECT * FROM inventory WHERE id = ?';
+      } else {
+        query = 'SELECT id, model, description, quantity, link FROM inventory WHERE id = ?';
+      }
+      const [rows] = await pool.query(query,[id]);
       
       if (rows.length === 0) {
         return { success: false, error: 'Item not found', status: 404 };

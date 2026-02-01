@@ -53,15 +53,7 @@ class InventoryController {
     try {
       // Check if user is admin via token (if provided)
       const isAdmin = await checkIfAdmin(req.headers.authorization);
-      
-      let query;
-      if (isAdmin) {
-        query = 'SELECT id, model, description, quantity, location, link FROM inventory ORDER BY id DESC';
-      } else {
-        query = 'SELECT id, model, description, quantity, link FROM inventory ORDER BY id DESC';
-      }
-      
-      const [rows] = await pool.query(query);
+      const result = await inventoryService.getAllInventory(isAdmin)
       
       res.json({
         success: true,
@@ -89,8 +81,8 @@ class InventoryController {
           message: 'Invalid item ID'
         });
       }
-      
-      const result = await inventoryService.getInventoryById(parseInt(id));
+      const isAdmin = await checkIfAdmin(req.headers.authorization);
+      const result = await inventoryService.getInventoryById(parseInt(id,isAdmin));
       
       if (!result.success) {
         return res.status(result.status || 404).json({
