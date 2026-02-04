@@ -28,6 +28,9 @@ router.post('/', authenticate, requireAdmin, inventoryController.createInventory
 // PUT /api/inventory/:id - Update inventory item
 router.put('/:id', authenticate, requireAdmin, inventoryController.updateInventoryItem);
 
+// PUT /api/inventory/add/:id - Add quantity to inventory item
+router.post('/add/:id', authenticate, requireAdmin, inventoryController.addtoQuantity);
+
 // DELETE /api/inventory/:id - Delete inventory item
 router.delete('/:id', authenticate, requireAdmin, inventoryController.deleteInventoryItem);
 

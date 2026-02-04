@@ -41,6 +41,24 @@ class InventoryService {
     }
   }
 
+  async addtoQuantity(id, quantity) {
+    try {
+      const [result] = await pool.query(
+        'UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+        [quantity, id]
+      );
+      
+      if (result.affectedRows === 0) {
+        return { success: false, error: 'Item not found', status: 404 };
+      }
+      
+      return { success: true, message: 'Quantity updated successfully' };
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      return { success: false, error: 'Failed to update quantity' };
+    }
+  }
+
   // Create new inventory item
   async createInventoryItem(itemData) {
     try {

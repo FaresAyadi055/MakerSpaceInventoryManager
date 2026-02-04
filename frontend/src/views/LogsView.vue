@@ -115,6 +115,12 @@
                     {{ formatDate(data.timestamp) }}
                   </template>
                 </Column>
+                                <!-- ID Column -->
+                <Column field="status" header="status" :sortable="true">
+                  <template #body="{ data }">  
+                    <Badge :value="data.status" :severity="data.status === 'returned' ? 'success' : 'danger'" />
+                  </template>
+                </Column>
               </DataTable>
             </div>
 
@@ -186,6 +192,15 @@
                 <!-- Admin Actions -->
                 <div class="p-4">
                   <div class="space-y-3">
+                <Button 
+                    label="Return Item" 
+                    icon="pi pi-undo" 
+                    class="w-full justify-start"
+                    severity="success"
+                    @click="returnSelectedItem"
+                    :disabled="!selectedLog || selectedLog?.status === 'returned'"
+                    v-tooltip="selectedLog?.status === 'returned' ? 'Item already returned' : 'Mark item as returned and add to inventory'"
+                  />
                     <Button 
                       label="Add New Log" 
                       icon="pi pi-plus" 
@@ -214,17 +229,24 @@
                 </div>
 
                 <!-- Selection Info -->
-                <div v-if="selectedLog" class="p-4 border-t">
-                  <div class="text-sm font-medium text-surface-700 mb-2">Selected Log:</div>
-                  <div class="text-xs text-surface-600 space-y-1">
-                    <div>ID: {{ selectedLog.id }}</div>
-                    <div>Model ID: {{ selectedLog.model_id }}</div>
-                    <div>Student: {{ selectedLog.student_email }}</div>
-                    <div>Class: {{ selectedLog.class_name }}</div>
-                    <div>Quantity: {{ selectedLog.quantity }}</div>
-                    <div>Logged: {{ formatDate(selectedLog.timestamp) }}</div>
-                  </div>
+            <div v-if="selectedLog" class="p-4 border-t">
+              <div class="text-sm font-medium text-surface-700 mb-2">Selected Log:</div>
+              <div class="text-xs text-surface-600 space-y-1">
+                <div>ID: {{ selectedLog.id }}</div>
+                <div>Model ID: {{ selectedLog.model_id }}</div>
+                <div>Student: {{ selectedLog.student_email }}</div>
+                <div>Class: {{ selectedLog.class_name }}</div>
+                <div>Quantity: {{ selectedLog.quantity }}</div>
+                <div>Status: 
+                  <Badge 
+                    :value="selectedLog.status" 
+                    :severity="selectedLog.status === 'returned' ? 'success' : 'danger'" 
+                    size="small"
+                  />
                 </div>
+                <div>Logged: {{ formatDate(selectedLog.timestamp) }}</div>
+              </div>
+              </div>
               </div>
             </div>
           </div>
@@ -569,7 +591,7 @@ const loadData = async () => {
     }
     
     const data = await response.json()
-    
+    console.log(data)
     if (data.success && data.data) {
       logs.value = data.data.sort((a, b) => (b.id || 0) - (a.id || 0))
       
@@ -736,12 +758,39 @@ const editSelectedLog = () => {
     return
   }
 
+  // Don't allow editing if status is 'returned'
+  if (selectedLog.value.status === 'returned') {
+    toast.add({
+      severity: 'warn',
+      summary: 'Cannot Edit',
+      detail: 'Returned items cannot be edited',
+      life: 3000
+    })
+    return
+  }
+
   openEditDialog()
 }
 
 const openEditDialog = () => {
+  if (!selectedLog.value) return
+  
   // Parse the class_name from selected log
-  const { prefix, number } = parseClassName(selectedLog.value.class_name)
+  // The class_name format from backend is like "Junior RE G2" or "Freshman G5"
+  const className = selectedLog.value.class_name || ''
+  let prefix = ''
+  let number = null
+  
+  // Split by " G" to separate prefix and number
+  const parts = className.split(' G')
+  if (parts.length === 2) {
+    prefix = parts[0].trim()
+    number = parseInt(parts[1])
+  } else {
+    // Fallback if format doesn't match
+    prefix = className
+    number = null
+  }
   
   editForm.value = {
     id: selectedLog.value.id,
@@ -749,6 +798,7 @@ const openEditDialog = () => {
     student_email: selectedLog.value.student_email,
     class_prefix: prefix,
     class_number: number,
+    class: selectedLog.value.class,
     quantity: selectedLog.value.quantity
   }
   showEditDialog.value = true
@@ -811,7 +861,7 @@ const updateLog = async () => {
   
   try {
     const class_name = `${editForm.value.class_prefix} G${editForm.value.class_number}`
-    
+
     const response = await fetch(`${apiUrl}/logs/${editForm.value.id}`, {
       method: 'PUT',
       headers: {
@@ -821,8 +871,9 @@ const updateLog = async () => {
       body: JSON.stringify({
         model_id: editForm.value.model_id,
         student_email: editForm.value.student_email.trim(),
-        class_name: class_name,
-        quantity: editForm.value.quantity
+        class_name: class_name || editForm.value.class,
+        quantity: editForm.value.quantity,
+        status: selectedLog.value.status 
       })
     })
 
@@ -848,7 +899,7 @@ const updateLog = async () => {
           ...logs.value[index], 
           model_id: editForm.value.model_id,
           student_email: editForm.value.student_email,
-          class_name: class_name,
+          class_name: class_name || editForm.value.class,
           quantity: editForm.value.quantity
         }
       }
@@ -922,6 +973,120 @@ const deleteSelectedLog = () => {
           severity: 'error',
           summary: 'Delete Failed',
           detail: error.message || 'Failed to delete log entry',
+          life: 5000
+        })
+        throw error
+      }
+    }
+  )
+}
+// Add this function in the script section (after deleteSelectedLog function):
+
+// Return item function
+const returnSelectedItem = () => {
+  if (!selectedLog.value) {
+    toast.add({
+      severity: 'warn',
+      summary: 'No Log Selected',
+      detail: 'Please select a log entry to return',
+      life: 3000
+    })
+    return
+  }
+
+  // Check if item is already returned
+  if (selectedLog.value.status === 'returned') {
+    toast.add({
+      severity: 'warn',
+      summary: 'Already Returned',
+      detail: 'This item has already been returned',
+      life: 3000
+    })
+    return
+  }
+
+  showConfirmation(
+    'return',
+    `Are you sure you want to mark this item as returned? This will add ${selectedLog.value.quantity} items back to inventory.`,
+    'success',
+    async () => {
+      try {
+        // First, update the log status to 'returned'
+        console.log(`${apiUrl}/inventory/add/${selectedLog.value.model_id}`)
+        selectedLog.value.class_name = selectedLog.value.class
+        const updateLogResponse = await fetch(`${apiUrl}/logs/${selectedLog.value.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            ...selectedLog.value, // Keep all existing data
+            status: 'returned' // Only update status
+          })
+        })
+
+        if (!updateLogResponse.ok) {
+          const errorData = await updateLogResponse.json().catch(() => ({}))
+          throw new Error(errorData.message || errorData.error || `HTTP error! status: ${updateLogResponse.status}`)
+        }
+
+        const updateLogData = await updateLogResponse.json()
+        
+        if (updateLogData.success) {
+          // Now, add the quantity back to inventory
+          const addToInventoryResponse = await fetch(`${apiUrl}/inventory/add/${selectedLog.value.model_id}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              quantity: selectedLog.value.quantity
+            })
+          })
+
+          if (!addToInventoryResponse.ok) {
+            const errorData = await addToInventoryResponse.json().catch(() => ({}))
+            throw new Error(errorData.message || errorData.error || `HTTP error! status: ${addToInventoryResponse.status}`)
+          }
+
+          const inventoryData = await addToInventoryResponse.json()
+          
+          if (inventoryData.success) {
+            toast.add({
+              severity: 'success',
+              summary: 'Item Returned',
+              detail: `Item marked as returned and ${selectedLog.value.quantity} items added back to inventory`,
+              life: 4000
+            })
+            
+            // Update local data
+            const index = logs.value.findIndex(log => log.id === selectedLog.value.id)
+            if (index !== -1) {
+              logs.value[index] = { 
+                ...logs.value[index], 
+                status: 'returned'
+              }
+            }
+            
+            // Refresh the selected log to show updated status
+            selectedLog.value = { ...selectedLog.value, status: 'returned' }
+            
+            // Reload data to ensure sync
+            loadData()
+          } else {
+            throw new Error(inventoryData.message || 'Failed to update inventory')
+          }
+        } else {
+          throw new Error(updateLogData.message || 'Failed to update log status')
+        }
+      } catch (error) {
+        console.error('Error returning item:', error)
+        toast.add({
+          severity: 'error',
+          summary: 'Return Failed',
+          detail: error.message || 'Failed to return item',
           life: 5000
         })
         throw error

@@ -69,7 +69,6 @@ class InventoryController {
       });
     }
   }
-
   // Get single inventory item
   async getInventoryItem(req, res) {
     try {
@@ -166,6 +165,39 @@ class InventoryController {
       });
     }
   }
+async addtoQuantity(req, res) {
+  try {
+    const { id } = req.params;
+    const { quantity } = req.body;
+    
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid item ID'
+      });
+    }
+    
+    const result = await inventoryService.addtoQuantity(parseInt(id), quantity);
+    
+    if (!result.success) {
+      return res.status(result.status || 400).json({
+        success: false,
+        message: result.error
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: result.message || 'Item quantity updated successfully'
+    });
+  } catch (error) {
+    console.error('Controller error - addtoQuantity:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    })
+}
+}
 
   // Delete inventory item
   async deleteInventoryItem(req, res) {

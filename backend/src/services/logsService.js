@@ -31,7 +31,7 @@ async getLogById(id) {
 }   
 async createLogEntry(logData) {
     try {
-        const { model_id, student_email, class_name, quantity } = logData;
+        const { model_id, student_email, class_name, quantity} = logData;
         const [result] = await pool.query(
             'INSERT INTO logs (model_id, student_email, class, quantity) VALUES (?, ?, ?, ?)',
             [model_id, student_email, class_name, quantity]
@@ -68,10 +68,10 @@ async deleteLog(id) {
 
 async updateLog(id, logData) {
     try {
-        const { model_id, student_email, class_name, quantity } = logData;        
+        const { model_id, student_email, class_name, quantity, status } = logData;        
         const [result] = await pool.query(
-            'UPDATE logs SET model_id = ?, student_email = ?, class = ?, quantity = ? WHERE id = ?',
-            [model_id, student_email, class_name, quantity, id]            
+            'UPDATE logs SET model_id = ?, student_email = ?, class = ?, quantity = ?, status = ? WHERE id = ?',
+            [model_id, student_email, class_name, quantity, status, id]            
         );        
         if (result.affectedRows === 0) {
             return { success: false, error: 'Log not found', status: 404 };
