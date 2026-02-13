@@ -5,7 +5,7 @@
       <div class="footer-section">
         <div class="flex align-items-center gap-2">
           <Avatar icon="pi pi-box" shape="circle" size="small" />
-          <span class="font-medium"> MakerSpace Inventory</span>
+          <span class="font-medium"> FabLab Inventory</span>
         </div>
         <div class="text-xs opacity-80 mt-1">
           © {{ currentYear }} All rights reserved.
@@ -14,7 +14,7 @@
 
       <div class="footer-section">
         <span class="font-bold block mb-2">Contact Us:</span>
-        <a href="mailto:makerspace@smu.tn" class="contact-link">
+        <a href="mailto:fablab@smu.tn" class="contact-link">
           <i class="pi pi-envelope"></i>
           <span>makerspace@smu.tn</span>
         </a>

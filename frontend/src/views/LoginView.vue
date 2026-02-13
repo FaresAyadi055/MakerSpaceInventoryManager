@@ -5,7 +5,7 @@
       <!-- Logo/Header -->
       <div class="text-center mb-8">
         <i class="pi pi-box text-6xl text-primary-500 mb-4"></i>
-        <h1 class="text-3xl font-bold text-surface-900">MakerSpace Inventory</h1>
+        <h1 class="text-3xl font-bold text-surface-900">FabLab Inventory</h1>
         <p class="text-surface-600 mt-2">Sign in with your school email</p>
       </div>
 

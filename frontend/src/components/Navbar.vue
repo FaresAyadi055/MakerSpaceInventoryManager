@@ -6,7 +6,7 @@
       <div class="navbar-brand">
         <router-link to="/home" class="logo-link">
           <i class="pi pi-box navbar-logo"></i>
-          <span class="brand-name">MakerSpace</span>
+          <span class="brand-name">FabLab</span>
           <span class="brand-subtitle">Inventory</span>
         </router-link>
       </div>

@@ -28,7 +28,7 @@ const emailService = {
       
       const message = {
         message: {
-          subject: 'Your Makerspace Login Code',
+          subject: 'Your FabLab Login Code',
           body: {
             contentType: 'HTML',
             content: this.generateEmailHtml(code)
@@ -74,7 +74,7 @@ const emailService = {
   generateEmailHtml(code) {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">Makerspace app Login</h2>
+        <h2 style="color: #333;">FabLab app Login</h2>
         <p>Your verification code is:</p>
         <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
           <h1 style="color: #007bff; font-size: 36px; letter-spacing: 5px; margin: 0;">
@@ -85,7 +85,7 @@ const emailService = {
         <p>If you didn't request this code, please ignore this email.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
         <p style="color: #666; font-size: 12px;">
-          MakerSpace App<br />
+          FabLab App<br />
           MedTech University
         </p>
       </div>

@@ -1,1 +1,1 @@
-# MakerSpaceInventoryManager
+# FabLabInventoryManager
