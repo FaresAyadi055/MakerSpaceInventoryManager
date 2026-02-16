@@ -487,7 +487,7 @@ const confirmSeverity = ref('danger')
 const confirmCallback = ref(null)
 
 // Options
-const classPrefixes = ref(['Freshman', 'Sophomore RE','Sophomore CSE','Junior RE', 'Junior CSE','Senior RE', 'Senior CSE', 'Final Year RE', 'Final Year CSE',"L1","L2","L3"])
+const classPrefixes = ref(['Freshman', 'Sophomore RE','Sophomore CSE','Junior RE', 'Junior CSE','Senior RE', 'Senior CSE', 'Final Year RE', 'Final Year CSE',"Licence"])
 const classNumbers = ref([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
 // Forms
