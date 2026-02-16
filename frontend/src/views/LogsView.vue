@@ -614,7 +614,6 @@ const loadData = async () => {
     })
   } finally {
     loading.value = false
-    console.log('Logs loaded:', data.data)
   }
 }
 
