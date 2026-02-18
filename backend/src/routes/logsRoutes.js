@@ -21,4 +21,7 @@ router.put('/:id', authenticate, requireAdmin, LogsController.updateLog);
 // DELETE /api/logs/:id - Delete log
 router.delete('/:id', authenticate, requireAdmin, LogsController.deleteLog);
 
+// GET /api/logs/student/:student_email - Get logs for a specific student
+router.get('/student/:student_email', authenticate, LogsController.getLogsByStudentEmail);
+
 export default router;

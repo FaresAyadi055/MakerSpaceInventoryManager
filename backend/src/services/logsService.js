@@ -28,7 +28,19 @@ async getLogById(id) {
         console.error('Error getting log:', error);
         return { success: false, error: 'Database error' };
     }
-}   
+} 
+async getLogsByStudentEmail(student_email) {
+    try {
+        const [rows] = await pool.query(
+            'SELECT logs.id, logs.model_id, inventory.model, logs.student_email, logs.class, logs.quantity, logs.timestamp, logs.status FROM logs LEFT JOIN inventory ON logs.model_id = inventory.id WHERE logs.student_email = ? and logs.status = "not returned" ORDER BY timestamp DESC',
+            [student_email]
+        );
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error('Error getting logs by student email:', error);
+        return { success: false, error: 'Database error' };
+    }  
+}
 async createLogEntry(logData) {
     try {
         const { model_id, student_email, class_name, quantity} = logData;

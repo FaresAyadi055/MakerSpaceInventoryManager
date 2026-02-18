@@ -63,7 +63,7 @@
                     <div class="flex items-center gap-2 mb-1">
                       <i :class="getRequestIcon(request.type)" class="text-lg"></i>
                       <span class="font-semibold text-surface-900">
-                        {{ request.type === 'available' ? ' Available Item Request ' : ' Unavailable Item Request ' }}
+                        {{ request.type === 'available' || request.type === 'log' ? ' Available Item Request ' : ' Unavailable Item Request ' }}
                       </span>
                       <Badge 
                         :value="request.status || 'pending'" 
@@ -76,7 +76,7 @@
 
                 <!-- Request Details -->
                 <div class="space-y-2">
-                  <div v-if="request.type === 'available'">
+                  <div v-if="request.type === 'available' || request.type === 'log'">
                     <div class="flex items-center justify-between">
                       <span class="text-surface-600">Model ID:</span>
                       <span class="font-medium">{{`${request.model_id}` }}</span>
@@ -137,6 +137,10 @@
                   <div class="flex justify-between items-center mb-2">
                     <span class="text-surface-600">Unavailable Items:</span>
                     <span class="font-semibold text-orange-600">{{ missingRequests.length }}</span>
+                  </div>
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-surface-600">Approved Items:</span>
+                    <span class="font-semibold text-blue-600">{{ logRequests.length }}</span>
                   </div>
                 </div>
               </div>
@@ -201,6 +205,7 @@ const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 const loading = ref(false)
 const availableRequests = ref([])
 const missingRequests = ref([])
+const logRequests = ref([]) // New state for approved requests from logs
 const activeTab = ref('all')
 const requestToDelete = ref(null)
 const showDeleteDialog = ref(false)
@@ -210,12 +215,13 @@ const deletingRequest = ref(false)
 const tabs = [
   { id: 'all', label: 'All Requests' },
   { id: 'available', label: 'Available Items' },
-  { id: 'missing', label: 'Unavailable Items' }
+  { id: 'missing', label: 'Unavailable Items' },
+  { id: 'approved', label: 'Approved Items' } // New tab for approved requests
 ]
 
 // Computed properties
 const userEmail = computed(() => user.value?.email || '')
-const totalRequests = computed(() => availableRequests.value.length + missingRequests.value.length)
+const totalRequests = computed(() => availableRequests.value.length + missingRequests.value.length + logRequests.value.length)
 
 // All requests combined and sorted by timestamp (newest first)
 const allRequests = computed(() => {
@@ -233,8 +239,17 @@ const allRequests = computed(() => {
     timestamp: req.timestamp
   }))
   
+  // Add log requests with type 'log' and ensure they have approved status
+  const logs = logRequests.value.map(req => ({
+    ...req,
+    type: 'log',
+    id: req.id,
+    timestamp: req.timestamp,
+    status: 'approved' // Force status to approved for log requests
+  }))
+  
   // Combine and sort by timestamp (newest first)
-  return [...available, ...missing].sort((a, b) => 
+  return [...available, ...missing, ...logs].sort((a, b) => 
     new Date(b.timestamp) - new Date(a.timestamp)
   )
 })
@@ -246,6 +261,8 @@ const filteredRequests = computed(() => {
       return allRequests.value.filter(req => req.type === 'available')
     case 'missing':
       return allRequests.value.filter(req => req.type === 'missing')
+    case 'approved':
+      return allRequests.value.filter(req => req.type === 'log')
     default:
       return allRequests.value
   }
@@ -281,7 +298,20 @@ const loadRequests = async () => {
       const missingData = await missingResponse.json()
       if (missingData.success) {
         missingRequests.value = missingData.data || []
-        console.log(missingRequests.value)
+      }
+    }
+    
+    // Load approved requests from logs
+    const logsResponse = await fetch(`${apiUrl}/logs/student/${encodeURIComponent(userEmail.value)}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    
+    if (logsResponse.ok) {
+      const logsData = await logsResponse.json()
+      if (logsData.success) {
+        logRequests.value = logsData.data || []
       }
     }
     
@@ -310,20 +340,29 @@ const getRequestCount = (tabId) => {
   switch (tabId) {
     case 'available': return availableRequests.value.length
     case 'missing': return missingRequests.value.length
+    case 'approved': return logRequests.value.length
     default: return totalRequests.value
   }
 }
 
 const getRequestTypeClass = (type) => {
-  return type === 'available' 
-    ? 'border-l-4 border-green-500' 
-    : 'border-l-4 border-orange-500'
+  if (type === 'available') {
+    return 'border-l-4 border-green-500'
+  } else if (type === 'missing') {
+    return 'border-l-4 border-orange-500'
+  } else {
+    return 'border-l-4 border-blue-500' // For log/approved requests
+  }
 }
 
 const getRequestIcon = (type) => {
-  return type === 'available' 
-    ? 'pi pi-check-circle text-green-500' 
-    : 'pi pi-question-circle text-orange-500'
+  if (type === 'available') {
+    return 'pi pi-check-circle text-green-500'
+  } else if (type === 'missing') {
+    return 'pi pi-question-circle text-orange-500'
+  } else {
+    return 'pi pi-check-circle text-blue-500' // For log/approved requests
+  }
 }
 
 const getStatusSeverity = (status) => {
@@ -357,6 +396,17 @@ const confirmDelete = async () => {
       ? '/requests' 
       : '/missing'
     
+    // Note: Log requests might not support deletion, so we only handle available and missing
+    if (requestToDelete.value.type === 'log') {
+      toast.add({
+        severity: 'info',
+        summary: 'Cannot Delete',
+        detail: 'Approved requests cannot be deleted from logs',
+        life: 3000
+      })
+      return
+    }
+    
     const response = await fetch(`${apiUrl}${endpoint}/${requestToDelete.value.id}`, {
       method: 'DELETE',
       headers: {
@@ -377,7 +427,7 @@ const confirmDelete = async () => {
         availableRequests.value = availableRequests.value.filter(
           req => req.id !== requestToDelete.value.id
         )
-      } else {
+      } else if (requestToDelete.value.type === 'missing') {
         missingRequests.value = missingRequests.value.filter(
           req => req.id !== requestToDelete.value.id
         )
@@ -570,7 +620,7 @@ onUnmounted(() => {
   /* FIXED: Button layout for mobile */
   .filter-buttons {
     display: grid !important; /* Use grid for better control */
-    grid-template-columns: repeat(3, 1fr); /* 3 equal columns */
+    grid-template-columns: repeat(4, 1fr); /* 4 equal columns for 4 tabs */
     gap: 0.375rem; /* Smaller gap */
     padding: 0 0.75rem 0.75rem 0.75rem;
     overflow-x: visible; /* No scroll needed with grid */
@@ -620,7 +670,7 @@ onUnmounted(() => {
   
   /* Adjust buttons for very small screens */
   .filter-buttons {
-    grid-template-columns: 1fr; /* Stack buttons vertically */
+    grid-template-columns: 1fr 1fr; /* 2 columns on very small screens */
     gap: 0.25rem;
     padding: 0 0.5rem 0.5rem 0.5rem;
   }
@@ -646,4 +696,4 @@ onUnmounted(() => {
     font-size: 0.85rem;
   }
 }
-</style>  
+</style>

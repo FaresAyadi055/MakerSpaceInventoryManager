@@ -47,6 +47,28 @@ class LogsController {
             });
         }
     }
+    async getLogsByStudentEmail(req, res) {
+        try {
+            const { student_email } = req.params;
+            const result = await LogsService.getLogsByStudentEmail(student_email);
+            if (!result.success) {
+                return res.status(result.status || 404).json({
+                    success: false,
+                    message: result.error
+                });
+            }
+            res.json({
+                success: true,
+                data: result.data
+            });
+        } catch (error) {
+            console.error('Controller error - getLogsByStudentEmail:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+    }
     async createLogEntry(req, res) {
         try {
             const result = await LogsService.createLogEntry(req.body);
