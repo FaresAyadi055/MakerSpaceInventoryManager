@@ -88,6 +88,12 @@
                     <Badge :value="data.model_id" severity="contrast" />
                   </template>
                 </Column>
+                <!-- Model Name Column -->
+                <Column field="model" header="Model Name" :sortable="true">
+                  <template #body="{ data }">
+                    <Tag :value="data.model || 'Unknown Model'" severity="" rounded />
+                  </template>
+                </Column>
 
                 <!-- Student Email Column -->
                 <Column field="student_email" header="Student Email" :sortable="true" />

@@ -3,7 +3,7 @@ import pool from '../db/pool.js';
 class LogsService {
     async getAllLogs() {
         try {
-            const [rows] = await pool.query(` SELECT * FROM logs ORDER BY timestamp DESC `);
+            const [rows] = await pool.query(` SELECT logs.id, logs.model_id,inventory.model, logs.student_email, logs.class, logs.quantity, logs.timestamp, logs.status FROM logs LEFT JOIN inventory ON logs.model_id = inventory.id ORDER BY timestamp DESC `);
             return { success: true, data: rows };
         } catch (error) {
             console.error('Error getting logs:', error);
