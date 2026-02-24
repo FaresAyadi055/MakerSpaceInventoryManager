@@ -1,0 +1,35 @@
+{
+  "name": "makerspace-inventory-manager",
+  "version": "1.0.0",
+  "description": "Inventory management system for maker spaces",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "HOST=0.0.0.0 nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "nuxt": "^3.13.0",
+    "@pinia/nuxt": "^0.5.1",
+    "@primeuix/themes": "^2.0.2",
+    "@primevue/themes": "^4.5.4",
+    "axios": "^1.13.2",
+    "pinia": "^3.0.4",
+    "primevue": "^4.5.4",
+    "primeicons": "^7.0.0",
+    "vue": "^3.5.26",
+    "vue-router": "^4.6.4",
+    "dotenv": "^17.2.3",
+    "cors": "^2.8.5",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "express-rate-limit": "^8.2.1",
+    "mysql2": "^3.16.0"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "latest"
+  }
+}
