@@ -1,5 +1,5 @@
 // src/services/inventoryService.js
-import pool from '../db/pool.js';
+import pool from '../utils/db.js';
 
 class InventoryService {
   // Get all inventory items

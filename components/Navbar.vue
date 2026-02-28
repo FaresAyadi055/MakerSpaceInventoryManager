@@ -87,14 +87,18 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Avatar from 'primevue/avatar'
 
+// ✅ These are auto-imported by Nuxt, no need to import from 'vue-router'
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
+
+// Rest of your code remains the same...
+// Flag to track if router is ready
+const isRouterReady = ref(false)
 
 // Cart state
 const cartCount = ref(0)
@@ -104,7 +108,7 @@ const cartItems = ref([])
 
 // Check if user is admin
 const isAdmin = computed(() => {
-  return user.value.role === 'admin' || user.value.isAdmin === true
+  return user.value?.role === 'admin' || user.value?.isAdmin === true
 })
 
 // Admin navigation links
@@ -118,9 +122,8 @@ const adminLinks = [
 
 // Event handler for cart updates
 const handleCartUpdate = (event) => {
-
-  // Don't increment if we're on the cart page
-  if (route.path === '/cart') {
+  // ✅ FIXED: Check if route exists before accessing path
+  if (route?.path === '/cart') {
     return
   }
 
@@ -144,7 +147,7 @@ const handleCartUpdate = (event) => {
 
     // Show notification toast with item name
     const itemName = event.detail.itemName || event.detail.model_name || 'item'
-    toast.add({
+    toast?.add({
       severity: 'info',
       summary: 'Request Added',
       detail: `"${itemName}" added to your requests`,
@@ -153,7 +156,7 @@ const handleCartUpdate = (event) => {
     })
   } else {
     // Generic notification if no details provided
-    toast.add({
+    toast?.add({
       severity: 'info',
       summary: 'Request Added',
       detail: 'New request added to your cart',
@@ -204,7 +207,7 @@ const clearCart = () => {
   cartItems.value = []
   localStorage.removeItem('cartCount')
   localStorage.removeItem('cartItems')
-  toast.add({
+  toast?.add({
     severity: 'info',
     summary: 'Cart Cleared',
     detail: 'All requests have been cleared',
@@ -216,37 +219,51 @@ const clearCart = () => {
 const goToCart = () => {
   // Clear notification when going to cart
   clearCartNotification()
-  router.push('/cart')
+  
+  // ✅ FIXED: Check if router exists
+  if (router) {
+    router.push('/cart')
+  }
 }
 
 // Watch for route changes to clear notification on cart page
-watch(() => route.path, (newPath) => {
-  if (newPath === '/cart') {
+watch(() => route?.path, (newPath) => {
+  // ✅ FIXED: Only run if route exists
+  if (route && newPath === '/cart') {
     clearCartNotification()
   }
-})
+}, { immediate: false })
 
 // Get user data from localStorage
 onMounted(() => {
   // Load user data
   const userData = localStorage.getItem('user')
   if (userData) {
-    user.value = JSON.parse(userData)
+    try {
+      user.value = JSON.parse(userData)
+    } catch (e) {
+      console.error('Error parsing user data:', e)
+    }
   }
 
   // Load cart data
   loadCartData()
+
+  // Wait a tick for router to be ready
+  nextTick(() => {
+    isRouterReady.value = true
+    
+    // Check if we're already on cart page on mount
+    if (route?.path === '/cart') {
+      clearCartNotification()
+    }
+  })
 
   // Listen for cart update events from ANYWHERE in the app
   window.addEventListener('cart-updated', handleCartUpdate)
 
   // Listen for clear-cart-notification events
   window.addEventListener('clear-cart-notification', clearCartNotification)
-
-  // Check if we're already on cart page on mount
-  if (route.path === '/cart') {
-    clearCartNotification()
-  }
 
   // For debugging: expose clearCart function globally
   window.clearCartDebug = clearCart
@@ -259,17 +276,19 @@ onUnmounted(() => {
   delete window.clearCartDebug
 })
 
-// Computed properties
+// Computed properties with safe navigation
 const userInitial = computed(() => {
-  return user.value.name?.[0]?.toUpperCase() || user.value.email?.[0]?.toUpperCase() || 'U'
+  return user.value?.name?.[0]?.toUpperCase() || 
+         user.value?.email?.[0]?.toUpperCase() || 
+         'U'
 })
 
 const userName = computed(() => {
-  return user.value.name || 'User'
+  return user.value?.name || 'User'
 })
 
 const userEmail = computed(() => {
-  return user.value.email || 'user@example.com'
+  return user.value?.email || 'user@example.com'
 })
 
 // Logout function
@@ -298,7 +317,7 @@ const logout = async () => {
     )
     sessionKeys.forEach(key => sessionStorage.removeItem(key))
 
-    toast.add({
+    toast?.add({
       severity: 'success',
       summary: 'Logged out',
       detail: 'You have been logged out successfully',
@@ -307,12 +326,14 @@ const logout = async () => {
 
     // 4. Redirect to login
     setTimeout(() => {
-      router.push('/login')
+      if (router) {
+        router.push('/login')
+      }
     }, 500)
 
   } catch (error) {
     console.error('Logout error:', error)
-    toast.add({
+    toast?.add({
       severity: 'error',
       summary: 'Logout Failed',
       detail: 'There was an error logging out',

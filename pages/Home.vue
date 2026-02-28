@@ -1,7 +1,7 @@
-<!-- src/views/HomeView.vue -->
+<!-- pages/inventory/index.vue -->
 <template>
   <div class="home">
-    <Navbar />
+    <!-- Navbar will be handled by layout instead -->
     
     <div class="main-container">
       <div class="content-wrapper">
@@ -46,7 +46,7 @@
                 :loading="loading"
                 severity="secondary"
               /> <span>   </span>
-              <Button 
+              <Button v-if="false"
                 label="Request Unavailable Item" 
                 icon="pi pi-exclamation-circle" 
                 @click="showMissingDialog = true" 
@@ -620,28 +620,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
-import Textarea from 'primevue/textarea'
-import Select from 'primevue/select'
-import Dialog from 'primevue/dialog'
-import Badge from 'primevue/badge'
-import Tag from 'primevue/tag'
-import Toast from 'primevue/toast'
-import Tooltip from 'primevue/tooltip'
-import ProgressSpinner from 'primevue/progressspinner'
 import { useToast } from 'primevue/usetoast'
-import Navbar from '@/components/Navbar.vue'
-import { exportCSV } from '@/utils/exportCSV.js'
+import { exportCSV } from '~/utils/exportCSV.js' 
 
-const vTooltip = Tooltip
-
+// Nuxt 3 uses #build/imports for auto-imported composables
+// useRouter is auto-imported in Nuxt 3
 const router = useRouter()
 const toast = useToast()
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+const config = useRuntimeConfig()
+const apiUrl = config.public.apiUrl || 'http://localhost:4000/api'
 
 // State
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
@@ -715,6 +702,7 @@ const classNumbers = ref([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 const statusOptions = ref(['available', 'reserved', 'maintenance', 'broken'])
 
 // Computed properties
+console.log('current user',user.value)
 const userEmail = computed(() => user.value?.email || '')
 const userRole = computed(() => user.value?.role || 'student')
 
@@ -812,27 +800,15 @@ const resetMissingRequestForm = () => {
   }
 }
 
-// Load data
+// Load data - using $fetch instead of fetch
 const loadData = async () => {
   loading.value = true
   try {
-    const response = await fetch(apiUrl + '/inventory/', {
+    const data = await $fetch(`${apiUrl}/inventory/`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        router.push('/login')
-        return
-      }
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
     
     if (data.success && data.data) {
       inventoryItems.value = data.data.sort((a, b) => (a.id || 0) - (b.id || 0))
@@ -848,6 +824,15 @@ const loadData = async () => {
     }
   } catch (error) {
     console.error('Error loading data:', error)
+    
+    // Handle 401 unauthorized
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      router.push('/login')
+      return
+    }
+    
     toast.add({
       severity: 'error',
       summary: 'Error',
@@ -904,7 +889,7 @@ const openRequestDialog = (item) => {
   showRequestDialog.value = true
 }
 
-// Submit request
+// Submit request - using $fetch
 const submitRequest = async () => {
   if (!selectedItems.value) {
     toast.add({
@@ -936,7 +921,6 @@ const submitRequest = async () => {
     return
   }
 
-
   submittingRequest.value = true
   
   const requestData = {
@@ -947,20 +931,14 @@ const submitRequest = async () => {
   }
 
   try {
-    const response = await fetch(apiUrl + '/requests/', {
+    const data = await $fetch(`${apiUrl}/requests/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: JSON.stringify(requestData)
+      body: requestData
     })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
     
     if (data.success) {
       toast.add({
@@ -996,6 +974,7 @@ const submitRequest = async () => {
   }
 }
 
+// Submit missing item request - using $fetch
 const submitMissing = async () => {
   // Validation
   if (!missingrequestForm.value.model?.trim()) {
@@ -1048,20 +1027,14 @@ const submitMissing = async () => {
   }
 
   try {
-    const response = await fetch(apiUrl + '/missing/', {
+    const data = await $fetch(`${apiUrl}/missing/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: JSON.stringify(requestData)
+      body: requestData
     })
-
-    const data = await response.json()
-    
-    if (!response.ok) {
-      throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`)
-    }
     
     if (data.success) {
       toast.add({
@@ -1136,7 +1109,7 @@ const updateSelectedItem = () => {
   )
 }
 
-// Actual update logic
+// Actual update logic - using $fetch
 const performUpdate = async () => {
   updatingItem.value = true
   
@@ -1151,21 +1124,15 @@ const performUpdate = async () => {
       quantity: selectedItems.value.quantity || 0,
       location: selectedItems.value.location || '',
     }
-    const response = await fetch(`${apiUrl}/inventory/${itemId}`, {
+    
+    const data = await $fetch(`${apiUrl}/inventory/${itemId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: JSON.stringify(updateData)
+      body: updateData
     })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
     
     if (data.success) {
       toast.add({
@@ -1200,7 +1167,7 @@ const performUpdate = async () => {
   }
 }
 
-// Delete selected item (admin only)
+// Delete selected item (admin only) - using $fetch
 const deleteSelectedItem = (item) => {
   if (!item) return
   
@@ -1215,18 +1182,12 @@ const deleteSelectedItem = (item) => {
       const itemId = item.id
       
       try {
-        const response = await fetch(`${apiUrl}/inventory/${itemId}`, {
+        const data = await $fetch(`${apiUrl}/inventory/${itemId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const data = await response.json()
         
         if (data.success) {
           toast.add({
@@ -1255,7 +1216,7 @@ const deleteSelectedItem = (item) => {
   )
 }
 
-// Add new item (admin only)
+// Add new item (admin only) - using $fetch
 const addNewItem = async () => {
   // Validation
   if (!newItem.value.model?.trim()) {
@@ -1290,21 +1251,14 @@ const addNewItem = async () => {
   }
 
   try {
-    const response = await fetch(apiUrl + '/inventory/', {
+    const data = await $fetch(`${apiUrl}/inventory/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: JSON.stringify(itemData)
+      body: itemData
     })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
     
     if (data.success) {
       toast.add({
@@ -1416,9 +1370,16 @@ const formatDate = (dateString) => {
     return 'N/A'
   }
 }
+
+// Define page meta for layout/navigation
+definePageMeta({
+  layout: 'default', // or whatever layout you're using
+  middleware: 'auth' // if you have auth middleware
+})
 </script>
 
 <style scoped>
+/* Keep all your existing styles exactly as they are */
 .home {
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);

@@ -1,4 +1,4 @@
-<!-- src/views/LoginView.vue -->
+<!-- pages/login.vue -->
 <template>
   <div class="login-container">
     <div class="login-card">
@@ -24,6 +24,7 @@
             class="w-full"
             :invalid="!!emailError"
             @keyup.enter="loginWithMagic"
+            autofocus
           />
           <small class="text-red-500 mt-1 block" v-if="emailError">{{ emailError }}</small>
           <div class="text-sm text-surface-600 mt-2">
@@ -34,7 +35,7 @@
         </div>
 
         <Button
-          label="Verify Email"
+          label="Continue with Email"
           size="large"
           class="w-full"
           :loading="loading"
@@ -47,14 +48,6 @@
           </p>
         </div>
       </div>
-
-      <!-- Loading State -->
-      <div v-if="loading" class="mt-6 p-6 bg-blue-50 rounded-lg border border-blue-200 text-center">
-        <div class="flex items-center justify-center">
-          <i class="pi pi-spin pi-spinner text-2xl text-blue-500 mr-3"></i>
-          <span class="text-blue-700">Sending verification code...</span>
-        </div>
-      </div>
     </div>
 
     <!-- Toast -->
@@ -63,86 +56,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import InputText from 'primevue/inputtext'
-import Button from 'primevue/button'
-import axios from 'axios'
-import Toast from 'primevue/toast'
-import { Magic } from 'magic-sdk'
 
-const router = useRouter()
 const toast = useToast()
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
-const wakeUpBackend = async () => {
-  try {
-    await axios.get(`${import.meta.env.STATUS_CHECK_URL}`)
-    console.log('Backend is awake')
-  } catch (error) {
-    console.error('Error waking up backend:', error)
-  }
-}
-wakeUpBackend()
+const config = useRuntimeConfig()
+
+// API URL from runtime config - using your variable names
+const apiUrl = config.public.API_URL || 'http://localhost:4000/api'
+const magicPublishableKey = config.public.MAGIC_PUBLISHABLE_KEY
+
+// Debug mode - set to false in production
+const debug = true
+
+// Check if Magic key exists
+const magicKeyExists = computed(() => !!magicPublishableKey)
+
 // Magic SDK instance
 let magic = null
-const isMagicEnabled = ref(import.meta.env.VITE_MAGIC_ENABLED === 'true' || import.meta.env.PROD)
 const email = ref('')
 const loading = ref(false)
 const emailError = ref('')
-
-// Initialize Magic
-const initMagic = () => {
-  if (isMagicEnabled.value && import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY) {
-    try {
-      magic = new Magic(import.meta.env.VITE_MAGIC_PUBLISHABLE_KEY)
-      console.log('Magic SDK initialized')
-      
-      // Store globally for logout
-      window.magic = magic
-      
-      // Check if we should force logout (when coming from logout action)
-      const forceLogout = sessionStorage.getItem('force_magic_logout')
-      if (forceLogout === 'true') {
-        console.log('Force logging out from Magic...')
-        magic.user.logout().finally(() => {
-          sessionStorage.removeItem('force_magic_logout')
-          // Clear any remaining Magic tokens
-          clearMagicStorage()
-        })
-      }
-      
-    } catch (error) {
-      console.error('Failed to initialize Magic SDK:', error)
-    }
-  }
-}
-
-// Clear all Magic-related storage
-const clearMagicStorage = () => {
-  // Clear Magic localStorage keys
-  const magicKeys = Object.keys(localStorage).filter(key => 
-    key.startsWith('__magic') || 
-    key.startsWith('magic_') || 
-    key.includes('did') ||
-    key.includes('DID') ||
-    key.includes('oauth')
-  )
-  magicKeys.forEach(key => {
-    console.log('Removing Magic key:', key)
-    localStorage.removeItem(key)
-  })
-  
-  // Clear Magic sessionStorage
-  const sessionKeys = Object.keys(sessionStorage).filter(key => 
-    key.startsWith('__magic') || 
-    key.includes('magic')
-  )
-  sessionKeys.forEach(key => {
-    console.log('Removing Magic session key:', key)
-    sessionStorage.removeItem(key)
-  })
-}
+const initError = ref('')
 
 // Email validation
 const validateEmail = () => {
@@ -162,66 +97,144 @@ const validateEmail = () => {
   return true
 }
 
+// Initialize Magic with better error handling
+const initMagic = async () => {
+  if (!magicPublishableKey) {
+    initError.value = 'Magic Publishable Key is missing in environment variables'
+    console.error('Magic Publishable Key is missing. Check your .env file:', {
+      exists: !!magicPublishableKey,
+      key: magicPublishableKey ? 'present' : 'missing'
+    })
+    
+    toast.add({
+      severity: 'error',
+      summary: 'Configuration Error',
+      detail: 'Authentication service not configured properly',
+      life: 5000
+    })
+    return false
+  }
+
+  try {
+    
+    // Dynamic import of Magic SDK
+    const { Magic } = await import('magic-sdk')
+    
+    // Initialize Magic with the publishable key
+    magic = new Magic(magicPublishableKey)
+    
+    initError.value = ''
+    return true
+  } catch (error) {
+    initError.value = error.message || 'Failed to initialize Magic'
+    console.error('Failed to initialize Magic SDK:', {
+      error: error.message,
+      stack: error.stack,
+      key: magicPublishableKey ? 'present' : 'missing'
+    })
+    
+    toast.add({
+      severity: 'error',
+      summary: 'Setup Error',
+      detail: 'Failed to initialize authentication service: ' + error.message,
+      life: 5000
+    })
+    return false
+  }
+}
+
 // Main login function
 const loginWithMagic = async () => {
   if (!validateEmail()) return
+  
+  // Check if Magic is initialized
+  if (!magic) {
+    console.log('Magic not initialized, attempting to initialize...')
+    const initialized = await initMagic()
+    if (!initialized) {
+      toast.add({
+        severity: 'error',
+        summary: 'Setup Error',
+        detail: initError.value || 'Authentication service not initialized',
+        life: 3000
+      })
+      return
+    }
+  }
   
   loading.value = true
   emailError.value = ''
   
   try {
-    // First, ensure we're logged out from any existing Magic session
-    if (magic) {
-      try {
-        const isLoggedIn = await magic.user.isLoggedIn()
-        if (isLoggedIn) {
-          console.log('Existing Magic session found, logging out...')
-          await magic.user.logout()
-          clearMagicStorage()
-        }
-      } catch (error) {
-        console.log('Error checking Magic session:', error)
-      }
+    
+    // Step 1: First, check if user exists in your backend
+    const userCheck = await $fetch(`${apiUrl}/auth/login`, {
+      method: 'POST',
+      body: { email: email.value }
+    }).catch(err => {
+      console.error('Login endpoint error:', err)
+      throw new Error('Failed to connect to server. Please check if backend is running.')
+    })
+    
+    if (!userCheck.success) {
+      throw new Error(userCheck.message || 'Failed to initiate login')
     }
     
-    // Start new Magic login
+    
+    // Step 2: Show Magic OTP popup
     const didToken = await magic.auth.loginWithEmailOTP({
-      email: email.value,
-      showUI: true
+      email: email.value
     })
     
-    // Verify with backend
-    const response = await fetch(apiUrl + '/auth/magic/verify', {
+    // Step 3: Verify the DID token with your backend
+    const verifyData = await $fetch(`${apiUrl}/auth/magic/verify`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ didToken })
+      body: { didToken }
     })
     
-    const data = await response.json()
-    
-    if (data.success) {
-      handleLoginSuccess(data.data)
+    if (verifyData.success && verifyData.data) {
+      handleLoginSuccess(verifyData.data)
     } else {
-      throw new Error(data.message || 'Login failed')
+      throw new Error(verifyData.message || 'Verification failed')
     }
     
   } catch (error) {
     console.error('Login error:', error)
     
-    if (error.message?.includes('user denied') || error.code === -10000) {
+    // Handle specific Magic errors
+    if (error.message?.includes('Magic RPC Error')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Magic Error',
+        detail: 'Please check your Magic publishable key configuration',
+        life: 5000
+      })
+    } else if (error.message?.includes('Failed to fetch') || error.message?.includes('connect to server')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Connection Error',
+        detail: 'Cannot connect to server. Please check if backend is running.',
+        life: 5000
+      })
+    } else if (error.code === 'MAGIC_EMAIL_OTP_CANCELLED' || error.message?.includes('cancelled')) {
       toast.add({
         severity: 'info',
         summary: 'Login Cancelled',
-        detail: 'You can try again',
+        detail: 'You cancelled the login process',
+        life: 3000
+      })
+    } else if (error.code === 'MAGIC_EMAIL_OTP_EXPIRED') {
+      toast.add({
+        severity: 'warn',
+        summary: 'Code Expired',
+        detail: 'The verification code expired. Please try again.',
         life: 3000
       })
     } else {
       toast.add({
         severity: 'error',
         summary: 'Login Failed',
-        detail: error.message || 'Failed to start login process',
+        detail: error.data?.message || error.message || 'Failed to login',
         life: 3000
       })
     }
@@ -232,39 +245,52 @@ const loginWithMagic = async () => {
 
 // Handle successful login
 const handleLoginSuccess = (data) => {
+  const { token, user } = data
+  
+  if (!token || !user) {
+    console.error('Invalid login response:', data)
+    toast.add({
+      severity: 'error',
+      summary: 'Login Error',
+      detail: 'Invalid response from server',
+      life: 3000
+    })
+    return
+  }
+  
   // Save token and user data
-  localStorage.setItem('token', data.token)
-  localStorage.setItem('user', JSON.stringify(data.user))
+  localStorage.setItem('token', token)
+  localStorage.setItem('user', JSON.stringify(user))
   
   toast.add({
     severity: 'success',
     summary: 'Welcome!',
-    detail: `Logged in as ${data.user.email}`,
+    detail: `Logged in as ${user.email}`,
     life: 2000
   })
   
-  // Redirect to dashboard
+  // Redirect to home page
   setTimeout(() => {
-    router.push('/home')
+    navigateTo('/home')
   }, 1500)
 }
 
-// Initialize
-onMounted(() => {
-  initMagic()
+// Initialize on mount
+onMounted(async () => {
   
-  // Check if we're coming from a logout
-  const fromLogout = sessionStorage.getItem('from_logout')
-  if (fromLogout === 'true') {
-    console.log('Coming from logout, clearing Magic storage...')
-    clearMagicStorage()
-    if (magic) {
-      magic.user.logout().catch(() => {})
-    }
-    sessionStorage.removeItem('from_logout')
-  }
+  await initMagic()
+  
+  // Clear any existing auth state
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+})
+
+// Define page meta
+definePageMeta({
+  layout: 'auth'
 })
 </script>
+
 <style scoped>
 .login-container {
   display: flex;
@@ -296,7 +322,6 @@ onMounted(() => {
   }
 }
 
-/* Improved text hierarchy and spacing */
 .text-center {
   margin-bottom: 2.5rem;
 }
@@ -317,12 +342,10 @@ onMounted(() => {
   margin-top: 0.5rem;
 }
 
-/* Better spacing for sections */
 .space-y-6 > * + * {
   margin-top: 1.75rem;
 }
 
-/* Field spacing improvements */
 .field {
   margin-bottom: 1.75rem;
 }
@@ -335,7 +358,6 @@ onMounted(() => {
   display: block;
 }
 
-/* Input text improvements */
 :deep(.p-inputtext) {
   font-size: 1rem;
   line-height: 1.5;
@@ -347,13 +369,11 @@ onMounted(() => {
   padding: 1rem 1.25rem;
 }
 
-/* Button spacing */
 .p-button {
   font-weight: 500;
   letter-spacing: 0.025em;
 }
 
-/* Loading spinner */
 .pi-spin {
   animation: spin 1s linear infinite;
 }
@@ -367,7 +387,6 @@ onMounted(() => {
   }
 }
 
-/* Error message spacing */
 .text-red-500 {
   font-size: 0.875rem;
   margin-top: 0.5rem;
@@ -381,7 +400,6 @@ onMounted(() => {
   color: #6b7280;
 }
 
-/* Responsive adjustments */
 @media (max-width: 640px) {
   .login-card {
     padding: 32px 24px;

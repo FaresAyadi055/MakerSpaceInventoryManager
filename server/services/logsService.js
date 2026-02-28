@@ -1,4 +1,4 @@
-import pool from '../db/pool.js';
+import pool from '../utils/db.js';
 
 class LogsService {
     async getAllLogs() {

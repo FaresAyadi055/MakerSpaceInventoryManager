@@ -1,7 +1,6 @@
 <!-- src/views/AdminsView.vue -->
 <template>
   <div class="admins-view">
-    <Navbar />
     
     <div class="main-container">
       <div class="content-wrapper">
