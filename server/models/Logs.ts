@@ -7,7 +7,7 @@ export type ActionType =
   | 'INVENTORY_DELETE'
   | 'REQUEST_CREATE'
   | 'REQUEST_APPROVE'
-  | 'REQUEST_REJECT'
+  | 'REQUEST_DECLINE'
   | 'REQUEST_RETURN'
   | 'USER_LOGIN'
   | 'USER_CREATE'
@@ -76,8 +76,9 @@ const logSchema = new Schema<ILog>({
       'INVENTORY_DELETE',
       'REQUEST_CREATE',
       'REQUEST_APPROVE',
-      'REQUEST_REJECT',
+      'REQUEST_DECLINE',
       'REQUEST_RETURN',
+      'REQUEST_CANCEL',
       'USER_LOGIN',
       'USER_CREATE',
       'USER_UPDATE',

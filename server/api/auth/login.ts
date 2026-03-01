@@ -28,13 +28,11 @@ export default defineEventHandler(async (event) => {
 
     // Find or create user
     let user = await User.findOne({ email })
-    console.log(`User found: ${email}`)
     if (!user) {
       user = await User.create({
         email,
         role: 'student'
       })
-      console.log(`New user created: ${email}`)
     }
 
     return {

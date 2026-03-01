@@ -1,7 +1,6 @@
 <template>
   <div>
     <Navbar v-if="showNavbar" />
-    <Toast />
     <slot />
     <Footer  />
   </div>
@@ -12,7 +11,6 @@ import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import Navbar from '~/components/Navbar.vue'
 import Footer from '~/components/Footer.vue'
-import Toast from 'primevue/toast';
 
 const route = useRoute()
 const router = useRouter()

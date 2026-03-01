@@ -7,7 +7,7 @@ export default defineNuxtConfig({
     '@primevue/nuxt-module'
   ],
   
-  // PrimeVue configuration
+  // PrimeVue configuration - this is all you need!
   primevue: {
     options: {
       ripple: true,
@@ -15,7 +15,7 @@ export default defineNuxtConfig({
         preset: Lara,
         options: {
           prefix: 'p',
-          darkModeSelector: 'false', 
+          darkModeSelector: '.p-dark', // Changed from 'false' for better compatibility
           cssLayer: false
         }
       }
@@ -33,7 +33,6 @@ export default defineNuxtConfig({
   
   // Runtime config
   runtimeConfig: {
-    // Private keys (Server-side only)
     MAGIC_SECRET_KEY: process.env.MAGIC_SECRET_KEY,
     JWT_SECRET: process.env.JWT_SECRET || 'your-secret-key',
 
@@ -54,14 +53,11 @@ export default defineNuxtConfig({
     }
   },
   
-  // Build and Nitro fixes for Magic SDK
   build: {
     transpile: ['primevue', '@magic-sdk/admin'],
   },
 
   nitro: {
-    // IMPORTANT: 'vercel-edge' does not support Node.js built-ins required by Magic Admin.
-    // If you need Magic Admin, use 'vercel' or remove this line to use the default.
     preset: 'vercel', 
     plugins: ['@/server/index'],
     externals: {

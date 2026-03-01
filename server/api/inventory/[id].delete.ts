@@ -13,7 +13,6 @@ export default defineEventHandler(async (event) => {
     
     // Get component ID from URL
     const componentId = getRouterParam(event, 'id')
-    console.log('Deleting component ID:', componentId)
     
     if (!componentId || !mongoose.Types.ObjectId.isValid(componentId)) {
       throw createError({
@@ -43,7 +42,6 @@ export default defineEventHandler(async (event) => {
     let reason = 'Component deleted via admin panel'
     try {
       const body = await readBody(event)
-      console.log('Delete request body:', body)
       
       // Only extract reason if body exists and has reason property
       if (body && body.reason) {

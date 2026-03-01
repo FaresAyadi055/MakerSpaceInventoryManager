@@ -13,7 +13,6 @@ export default defineEventHandler(async (event) => {
     
     // Get component ID from URL
     const componentId = getRouterParam(event, 'id')
-    console.log('Updating component ID:', componentId)
     
     if (!componentId || !mongoose.Types.ObjectId.isValid(componentId)) {
       throw createError({
@@ -43,7 +42,6 @@ export default defineEventHandler(async (event) => {
     let body
     try {
       body = await readBody(event)
-      console.log('Received update body:', body)
     } catch (bodyError) {
       console.error('Error reading body:', bodyError)
       throw createError({
@@ -80,8 +78,6 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Component not found'
       })
     }
-
-    console.log('Found component:', component.model)
 
     // Track changes
     const changes: any[] = []
@@ -186,7 +182,6 @@ export default defineEventHandler(async (event) => {
     // Commit transaction
     await session.commitTransaction()
 
-    console.log(`✅ Inventory updated: ${component.model} by ${currentUser.email}`)
 
     return {
       success: true,

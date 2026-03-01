@@ -12,7 +12,6 @@ export default defineEventHandler(async (event) => {
     
     // Get current user from middleware
     const currentUser = getCurrentUser(event)
-    console.log('current user: ', currentUser)
     if (!currentUser) {
       throw createError({
         statusCode: 401,

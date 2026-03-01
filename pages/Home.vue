@@ -798,17 +798,19 @@ const resetMissingRequestForm = () => {
   }
 }
 
-// Load data - using $fetch instead of fetch
+// Load data - using fetch instead of $fetch
 const loadData = async () => {
   loading.value = true
   try {
-    const data = await $fetch(`${apiUrl}/inventory/`, {
+    const response = await fetch(`${apiUrl}/inventory/`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
     
-    if (data.success && data.data) {
+    const data = await response.json()
+    
+    if (response.ok && data.success) {
       inventoryItems.value = data.data.sort((a, b) => (a.id || 0) - (b.id || 0))
       
       toast.add({
@@ -824,7 +826,7 @@ const loadData = async () => {
     console.error('Error loading data:', error)
     
     // Handle 401 unauthorized
-    if (error.response?.status === 401) {
+    if (error.message?.includes('401') || error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       router.push('/login')
@@ -887,7 +889,7 @@ const openRequestDialog = (item) => {
   showRequestDialog.value = true
 }
 
-// Submit request - using $fetch
+// Submit request - using fetch (already done)
 const submitRequest = async () => {
   if (!selectedItems.value) {
     toast.add({
@@ -928,8 +930,7 @@ const submitRequest = async () => {
     quantity: requestForm.value.quantity
   }
 
-try {
-    // Use fetch instead of $fetch for more control
+  try {
     const response = await fetch(`${apiUrl}/requests/`, {
       method: 'POST',
       headers: {
@@ -960,7 +961,6 @@ try {
       expandedItemId.value = null
       loadData()
     } else {
-      // Show just the error message from the response
       throw new Error(data.message || 'Failed to submit request')
     }
   } catch (error) {
@@ -969,7 +969,6 @@ try {
     toast.add({
       severity: 'error',
       summary: 'Request Failed',
-      // This will now show just "You already have a pending request for this component"
       detail: error.message || 'Failed to submit request',
       life: 5000
     })
@@ -978,7 +977,7 @@ try {
   }
 }
 
-// Submit missing item request - using $fetch
+// Submit missing item request - using fetch instead of $fetch
 const submitMissing = async () => {
   // Validation
   if (!missingrequestForm.value.model?.trim()) {
@@ -1021,7 +1020,6 @@ const submitMissing = async () => {
 
   submittingMissingRequest.value = true
   
-  // Prepare data matching backend expectations
   const requestData = {
     model: missingrequestForm.value.model?.trim(),  
     model_description: missingrequestForm.value.description?.trim(),
@@ -1031,16 +1029,18 @@ const submitMissing = async () => {
   }
 
   try {
-    const data = await $fetch(`${apiUrl}/missing/`, {
+    const response = await fetch(`${apiUrl}/missing/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: requestData
+      body: JSON.stringify(requestData)
     })
     
-    if (data.success) {
+    const data = await response.json()
+    
+    if (response.ok && data.success) {
       toast.add({
         severity: 'success',
         summary: 'Request Submitted',
@@ -1048,7 +1048,6 @@ const submitMissing = async () => {
         life: 3000
       })
       
-      // Close the dialog
       showMissingDialog.value = false
       window.dispatchEvent(new CustomEvent('cart-updated', { 
         detail: { 
@@ -1058,7 +1057,6 @@ const submitMissing = async () => {
         }
       }))
       
-      // Reset the form
       resetMissingRequestForm()
     } else {
       throw new Error(data.message || data.error || 'Failed to submit request')
@@ -1113,7 +1111,7 @@ const updateSelectedItem = () => {
   )
 }
 
-// Actual update logic - using $fetch
+// Actual update logic - using fetch instead of $fetch
 const performUpdate = async () => {
   updatingItem.value = true
   
@@ -1127,8 +1125,6 @@ const performUpdate = async () => {
       quantity: selectedItems.value.quantity || 0,
       location: selectedItems.value.location || '',
     }
-    
-    
 
     const response = await fetch(`${apiUrl}/inventory/${itemId}`, {
       method: 'PUT',
@@ -1139,12 +1135,8 @@ const performUpdate = async () => {
       body: JSON.stringify(updateData) 
     })
     
-    
- 
     const data = await response.json()
 
-    
-    // Check if the request was successful
     if (response.ok && data.success) {
       toast.add({
         severity: 'success',
@@ -1153,7 +1145,6 @@ const performUpdate = async () => {
         life: 3000
       })
       
-      // Update the local data
       const index = inventoryItems.value.findIndex(item => item.id === itemId)
       if (index !== -1) {
         inventoryItems.value[index] = { ...inventoryItems.value[index], ...updateData }
@@ -1162,10 +1153,8 @@ const performUpdate = async () => {
       showUpdateDialog.value = false
       expandedItemId.value = null
       
-      // Refresh the data to get latest from server
       await loadData()
     } else {
-      // Throw error with message from server
       throw new Error(data.message || `Update failed with status ${response.status}`)
     }
   } catch (error) {
@@ -1176,12 +1165,13 @@ const performUpdate = async () => {
       detail: error.message || 'Failed to update item',
       life: 5000
     })
-    throw error // Re-throw to handle in confirmation dialog
+    throw error
   } finally {
     updatingItem.value = false
   }
 }
-// Delete selected item (admin only) - using $fetch
+
+// Delete selected item (admin only) - using fetch instead of $fetch
 const deleteSelectedItem = (item) => {
   if (!item) return
   
@@ -1196,14 +1186,16 @@ const deleteSelectedItem = (item) => {
       const itemId = item.id
       
       try {
-        const data = await $fetch(`${apiUrl}/inventory/${itemId}`, {
+        const response = await fetch(`${apiUrl}/inventory/${itemId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         })
         
-        if (data.success) {
+        const data = await response.json()
+        
+        if (response.ok && data.success) {
           toast.add({
             severity: 'success',
             summary: 'Item Deleted',
@@ -1224,13 +1216,13 @@ const deleteSelectedItem = (item) => {
           detail: error.message || 'Failed to delete item',
           life: 5000
         })
-        throw error // Re-throw to handle in confirmation dialog
+        throw error
       }
     }
   )
 }
 
-// Add new item (admin only) - using $fetch
+// Add new item (admin only) - using fetch instead of $fetch
 const addNewItem = async () => {
   // Validation
   if (!newItem.value.model?.trim()) {
@@ -1255,7 +1247,6 @@ const addNewItem = async () => {
 
   addingItem.value = true
 
-  // Prepare data
   const itemData = {
     model: newItem.value.model.trim(),
     description: newItem.value.description?.trim() || '',
@@ -1265,16 +1256,18 @@ const addNewItem = async () => {
   }
 
   try {
-    const data = await $fetch(`${apiUrl}/inventory/`, {
+    const response = await fetch(`${apiUrl}/inventory/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: itemData
+      body: JSON.stringify(itemData)
     })
     
-    if (data.success) {
+    const data = await response.json()
+    
+    if (response.ok && data.success) {
       toast.add({
         severity: 'success',
         summary: 'Item Added',
@@ -1282,7 +1275,6 @@ const addNewItem = async () => {
         life: 3000
       })
 
-      // Reset form and close dialog
       newItem.value = {
         model: '',
         description: '',
@@ -1294,7 +1286,6 @@ const addNewItem = async () => {
       
       showAddDialog.value = false
       
-      // Reload data to show the new item
       loadData()
     } else {
       throw new Error(data.message || 'Failed to add item')
@@ -1387,11 +1378,10 @@ const formatDate = (dateString) => {
 
 // Define page meta for layout/navigation
 definePageMeta({
-  layout: 'default', // or whatever layout you're using
-  middleware: 'auth' // if you have auth middleware
+  layout: 'default',
+  middleware: 'auth'
 })
 </script>
-
 <style scoped>
 /* Keep all your existing styles exactly as they are */
 .home {

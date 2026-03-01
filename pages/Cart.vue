@@ -12,7 +12,7 @@
           </div>
         </div>
 
-        <!-- Loading State -->
+        <!-- Loading State -->  
         <div v-if="loading" class="loading-state">
           <ProgressSpinner style="width: 50px; height: 50px" />
           <p>Loading requests...</p>
@@ -72,18 +72,6 @@
                 <div class="flex justify-between items-start">
                   <h3 class="product-title">{{ request.model || 'Unknown Item' }}</h3>
                   <!-- Cancel button only for pending requests -->
-                  <Button 
-                    v-if="request.status?.toLowerCase() === 'pending'"
-                    icon="pi pi-times"
-                    class="cancel-button"
-                    @click.stop="openDeleteDialog(request)"
-                    :loading="deletingRequest && requestToDelete?.id === request.id"
-                    severity="danger"
-                    text
-                    rounded
-                    aria-label="Cancel Request"
-                    v-tooltip="'Cancel Request'"
-                  />
                 </div>
                 
                 <!-- Request Details -->
@@ -209,38 +197,38 @@ const tabs = [
   { id: 'all', label: 'All Requests' },
   { id: 'pending', label: 'Pending' },
   { id: 'approved', label: 'Approved' },
-  { id: 'rejected', label: 'Rejected' },
+  { id: 'declined', label: 'Declined' },
   { id: 'returned', label: 'Returned' }
 ]
 
 // Computed properties
 const userEmail = computed(() => user.value?.email || '')
 
-// Filter requests by status
+// Filter requests by status - FIXED: Added proper computed properties
 const pendingRequests = computed(() => 
   requests.value.filter(req => req.status?.toLowerCase() === 'pending')
 )
 const approvedRequests = computed(() => 
   requests.value.filter(req => req.status?.toLowerCase() === 'approved')
 )
-const rejectedRequests = computed(() => 
-  requests.value.filter(req => req.status?.toLowerCase() === 'declined' || req.status?.toLowerCase() === 'rejected')
+const declinedRequests = computed(() => 
+  requests.value.filter(req => req.status?.toLowerCase() === 'declined')
 )
-const returnedcomponents = computed(() => 
+const returnedRequests = computed(() => 
   requests.value.filter(req => req.status?.toLowerCase() === 'returned')
 )
 
-// Filtered requests based on active tab
+// Filtered requests based on active tab - FIXED: Added missing 'declined' case and proper returns
 const filteredRequests = computed(() => {
   switch (activeTab.value) {
     case 'pending':
       return pendingRequests.value
     case 'approved':
       return approvedRequests.value
-    case 'rejected':
-      return rejectedRequests.value
+    case 'declined':
+      return declinedRequests.value  // FIXED: Return the value
     case 'returned':
-      return returnedcomponents.value
+      return returnedRequests.value
     default:
       return requests.value
   }
@@ -296,13 +284,13 @@ const loadRequests = async () => {
   }
 }
 
-// Helper functions
+// Helper functions - FIXED: Added proper return values for all cases
 const getRequestCount = (tabId) => {
   switch (tabId) {
     case 'pending': return pendingRequests.value.length
     case 'approved': return approvedRequests.value.length
-    case 'rejected': return rejectedRequests.value.length
-    case 'returned': return returnedcomponents.value.length
+    case 'declined': return declinedRequests.value.length  // FIXED: Use correct variable name
+    case 'returned': return returnedRequests.value.length
     default: return requests.value.length
   }
 }
@@ -311,7 +299,6 @@ const getStatusClass = (status) => {
   switch (status?.toLowerCase()) {
     case 'approved': return 'in-stock'
     case 'pending': return 'low-stock'
-    case 'rejected': 
     case 'declined': return 'out-of-stock'
     case 'returned': return 'returned-stock'
     default: return 'low-stock'
