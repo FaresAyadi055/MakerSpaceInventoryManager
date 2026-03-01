@@ -83,18 +83,23 @@ Create a `.env` file in the project root:
 VITE_API_URL=http://localhost:3000/api
 
 # Database Configuration
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=inventory_db
-DB_PORT=3306
+MONGO_URI=mongodb+srv:.....
 
 # JWT Configuration
 JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRE=7d
 
+MAGIC_PUBLISHABLE_KEY=...
+MAGIC_SECRET_KEY=....
+
+STATUS_CHECK_URL=http://localhost:4000/health
+VITE_APP_NAME=FabLab Inventory
+VITE_DEBUG_MODE=false
+VITE_MAGIC_ENABLED=true
+
+
 # Server Configuration
-PORT=3000
+PORT=4000
 NODE_ENV=development
 ```
 

@@ -40,7 +40,7 @@ export default defineNuxtConfig({
       API_URL: process.env.API_URL || 'http://localhost:4000/api',
       STATUS_CHECK_URL: process.env.STATUS_CHECK_URL || 'http://localhost:4000/',
       MAGIC_ENABLED: process.env.VITE_MAGIC_ENABLED || 'true',
-      MAGIC_PUBLISHABLE_KEY: process.env.VITE_MAGIC_PUBLISHABLE_KEY || ''
+      MAGIC_PUBLISHABLE_KEY: process.env.MAGIC_PUBLISHABLE_KEY || ''
     }
   },
   
