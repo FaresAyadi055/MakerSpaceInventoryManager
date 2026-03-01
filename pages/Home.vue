@@ -104,7 +104,6 @@
 
                 <!-- Product Info -->
                 <div class="product-info">
-                  <div class="product-id">#{{ item.id }}</div>
                   <h3 class="product-title">{{ item.model || item.name }}</h3>
                   <p class="product-description" :title="item.description">
                     {{ truncateDescription(item.description) }}
@@ -241,28 +240,28 @@
               </div>
             </div>
 
-            <!-- Stats Cards only for admin-->
-            <br>
-            <div v-if="userRole === 'admin' && filteredItems.length > 0"
-            class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
-              <div class="card text-center p-6">
-                <div class="text-3xl font-bold text-primary-600">{{ totalItems }}</div>
-                <div class="text-surface-600 mt-2">Total Items</div>
+            <!-- Stats Summary Container -->
+            <div v-if="userRole === 'admin' && filteredItems.length > 0" class="summary-container card mt-8">
+              <div class="summary-header">
+                <h3 class="text-lg font-semibold text-surface-900">Inventory Summary</h3>
               </div>
-              <br>
-              <div class="card text-center p-6">
-                <div class="text-3xl font-bold text-yellow-600">{{ lowStockItems }}</div>
-                <div class="text-surface-600 mt-2">Low Stock</div>
-              </div>
-              <br>
-              <div class="card text-center p-6">
-                <div class="text-3xl font-bold text-red-600">{{ outOfStockItems }}</div>
-                <div class="text-surface-600 mt-2">Out of Stock</div>
-              </div>
-              <br>
-              <div class="card text-center p-6">
-                <div class="text-3xl font-bold text-green-600">{{ inStockItems }}</div>
-                <div class="text-surface-600 mt-2">In Stock</div>
+              <div class="summary-stats">
+                <div class="stat-item">
+                  <div class="stat-value text-primary-600">{{ totalItems }}</div>
+                  <div class="stat-label">Total Items</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value text-yellow-600">{{ lowStockItems }}</div>
+                  <div class="stat-label">Low Stock</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value text-red-600">{{ outOfStockItems }}</div>
+                  <div class="stat-label">Out of Stock</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value text-green-600">{{ inStockItems }}</div>
+                  <div class="stat-label">In Stock</div>
+                </div>
               </div>
             </div>
           </div>
@@ -702,7 +701,6 @@ const classNumbers = ref([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 const statusOptions = ref(['available', 'reserved', 'maintenance', 'broken'])
 
 // Computed properties
-console.log('current user',user.value)
 const userEmail = computed(() => user.value?.email || '')
 const userRole = computed(() => user.value?.role || 'student')
 
@@ -930,17 +928,20 @@ const submitRequest = async () => {
     quantity: requestForm.value.quantity
   }
 
-  try {
-    const data = await $fetch(`${apiUrl}/requests/`, {
+try {
+    // Use fetch instead of $fetch for more control
+    const response = await fetch(`${apiUrl}/requests/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: requestData
+      body: JSON.stringify(requestData)
     })
     
-    if (data.success) {
+    const data = await response.json()
+    
+    if (response.ok && data.success) {
       toast.add({
         severity: 'success',
         summary: 'Request Submitted',
@@ -957,15 +958,18 @@ const submitRequest = async () => {
       showRequestDialog.value = false
       resetRequestForm()
       expandedItemId.value = null
-      loadData() // Refresh data to update quantities
+      loadData()
     } else {
+      // Show just the error message from the response
       throw new Error(data.message || 'Failed to submit request')
     }
   } catch (error) {
     console.error('Error submitting request:', error)
+    
     toast.add({
       severity: 'error',
       summary: 'Request Failed',
+      // This will now show just "You already have a pending request for this component"
       detail: error.message || 'Failed to submit request',
       life: 5000
     })
@@ -1116,7 +1120,6 @@ const performUpdate = async () => {
   try {
     const itemId = selectedItems.value.id
     
-    // Create a clean update object
     const updateData = {
       model: selectedItems.value.model,
       description: selectedItems.value.description || '',
@@ -1125,16 +1128,24 @@ const performUpdate = async () => {
       location: selectedItems.value.location || '',
     }
     
-    const data = await $fetch(`${apiUrl}/inventory/${itemId}`, {
+    
+
+    const response = await fetch(`${apiUrl}/inventory/${itemId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: updateData
+      body: JSON.stringify(updateData) 
     })
     
-    if (data.success) {
+    
+ 
+    const data = await response.json()
+
+    
+    // Check if the request was successful
+    if (response.ok && data.success) {
       toast.add({
         severity: 'success',
         summary: 'Item Updated',
@@ -1150,11 +1161,15 @@ const performUpdate = async () => {
       
       showUpdateDialog.value = false
       expandedItemId.value = null
+      
+      // Refresh the data to get latest from server
+      await loadData()
     } else {
-      throw new Error(data.message || 'Failed to update item')
+      // Throw error with message from server
+      throw new Error(data.message || `Update failed with status ${response.status}`)
     }
   } catch (error) {
-    console.error('Error updating item:', error)
+    console.error('Update error:', error)
     toast.add({
       severity: 'error',
       summary: 'Update Failed',
@@ -1166,7 +1181,6 @@ const performUpdate = async () => {
     updatingItem.value = false
   }
 }
-
 // Delete selected item (admin only) - using $fetch
 const deleteSelectedItem = (item) => {
   if (!item) return
@@ -1710,6 +1724,49 @@ definePageMeta({
   width: 100px;
 }
 
+/* Summary Container */
+.summary-container {
+  padding: 1.5rem;
+  margin-top: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.summary-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.summary-stats {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  text-align: center;
+  flex: 1;
+  min-width: 120px;
+  padding: 0.5rem;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
@@ -1844,6 +1901,22 @@ definePageMeta({
     flex-wrap: wrap;
     justify-content: center;
   }
+
+  .summary-stats {
+    gap: 0.5rem;
+  }
+  
+  .stat-item {
+    min-width: 100px;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+  }
 }
 
 /* Responsive grid */
@@ -1861,6 +1934,16 @@ definePageMeta({
   .pagination-controls {
     flex-direction: column;
     gap: 0.5rem;
+  }
+  
+  .summary-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .stat-item {
+    min-width: auto;
   }
 }
 
@@ -1938,5 +2021,4 @@ definePageMeta({
 .card.mb-6 {
     margin-bottom: 1rem !important; 
   }
-
 </style>

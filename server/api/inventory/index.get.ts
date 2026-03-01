@@ -1,11 +1,14 @@
-// server/api/components/index.get.ts
 import { defineEventHandler, getQuery, createError } from 'h3'
 import Component from '~/server/models/Components'
 import connectDB from '~/server/utils/db'
+import { getCurrentUser, isAdmin } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
     await connectDB()
+    
+    // Get current user from context (set by auth middleware)
+    const user = getCurrentUser(event)
     
     const query = getQuery(event)
     const { 
@@ -32,7 +35,6 @@ export default defineEventHandler(async (event) => {
 
     // Filter by location
     if (location) {
-      // Handle both string and number locations
       const locationValue = isNaN(Number(location)) ? location : Number(location)
       filter.location = locationValue
     }
@@ -51,9 +53,28 @@ export default defineEventHandler(async (event) => {
     const sort: any = {}
     sort[sortBy as string] = sortOrder === 'desc' ? -1 : 1
 
-    // Execute query
+    // Define projection based on user role
+    // If user is admin/superadmin, return all fields
+    // Otherwise return limited fields for students/instructors
+    let projection = {}
+    
+    if (user && (user.role === 'superadmin' || user.role === 'admin')) {
+      // Admin gets all fields
+      projection = {} // Empty object means all fields
+    } else {
+      // Students and instructors get limited fields
+      projection = {
+        model: 1,
+        description: 1,
+        quantity: 1,
+        link: 1
+        // _id is always included by default, location, createdAt, updatedAt are excluded
+      }
+    }
+
+    // Execute query with projection
     const [components, total] = await Promise.all([
-      Component.find(filter)
+      Component.find(filter, projection)
         .sort(sort)
         .skip(skip)
         .limit(Number(limit)),
@@ -68,6 +89,10 @@ export default defineEventHandler(async (event) => {
         limit: Number(limit),
         total,
         pages: Math.ceil(total / Number(limit))
+      },
+      user: {
+        role: user?.role || 'student',
+        email: user?.email
       }
     }
 

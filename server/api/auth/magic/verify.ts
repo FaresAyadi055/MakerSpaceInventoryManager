@@ -69,6 +69,7 @@ export default defineEventHandler(async (event) => {
     // Find or create user
     let user = await User.findOne({ email })
     console.log(`User found via Magic: ${email}`)
+    console.log("user role: ", user?.role)
     if (!user) {
       // Create new user with student role by default
       // Only include magicIssuer if it exists (not null)

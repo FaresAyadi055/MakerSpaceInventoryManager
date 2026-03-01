@@ -21,7 +21,7 @@
             class="nav-item"
             v-if="isAdmin"
           >
-            <NuxtLink
+            <NuxtLink 
               :to="link.path"
               class="nav-link"
               active-class="active"
@@ -115,7 +115,7 @@ const isAdmin = computed(() => {
 const adminLinks = [
   { path: '/logs', name: 'Logs', icon: 'pi pi-history' },
   { path: '/requests', name: 'Requests', icon: 'pi pi-inbox' },
-  { path: '/missing', name: 'Missing Items', icon: 'pi pi-question-circle' },
+  //{ path: '/missing', name: 'Missing Items', icon: 'pi pi-question-circle' },
   { path: '/purchase-list', name: 'Purchase List', icon: 'pi pi-list-check' },
   { path: '/admin', name: 'Admins', icon: 'pi pi-cog' },
 ]

@@ -1,10 +1,11 @@
-// server/models/Inventory.ts
+// server/models/Requests.ts
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IRequest extends Document {
     user_id:  Schema.Types.ObjectId;
     component_id: Schema.Types.ObjectId;
-    available_quantity: number;
+    quantity_requested: number;
+    class: string;
     status: string;
 }
 
@@ -15,7 +16,7 @@ const requestSchema = new Schema<IRequest>({
     required: true
   },
   
-  available_quantity: {
+  quantity_requested: {
     type: Number,
     required: [true, 'Quantity is required'],
     min: [0, 'Quantity cannot be negative'],
@@ -27,10 +28,14 @@ const requestSchema = new Schema<IRequest>({
     ref: 'Component',
     required: true
   },
-
+  class : {
+    type: String,
+    required: [true, 'Class is required'],
+    trim: true
+  },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected','returned'],
+    enum: ['pending', 'approved', 'declined','returned'],
     required: true,
     default: 'pending'
   }

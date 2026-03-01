@@ -3,143 +3,138 @@
     <div class="cart-view">
       <div class="container mx-auto px-4 py-6">
         <!-- Header -->
-        <div class="mb-8">
-          <h1 class="text-3xl font-bold text-surface-900 mb-2">My Requests</h1>
-          <br/>
-          <p class="text-surface-600">View all your submitted requests</p>
-          <br/>
+        <div class="header-section">
+          <div>
+            <h1 class="text-3xl font-bold text-surface-900 mb-2">My Requests</h1>
+            <br/>
+            <p class="text-surface-600">View all your submitted requests</p>
+            <br/>
+          </div>
         </div>
 
         <!-- Loading State -->
-        <div v-if="loading" class="flex justify-center items-center h-64">
-          <i class="pi pi-spin pi-spinner text-4xl text-primary-600"></i>
+        <div v-if="loading" class="loading-state">
+          <ProgressSpinner style="width: 50px; height: 50px" />
+          <p>Loading requests...</p>
         </div>
 
         <!-- Content -->
-        <div v-else class="flex flex-col lg:flex-row gap-6">
-          <!-- Main Content - Requests List -->
-          <div class="lg:w-2/3">
-            <!-- Tabs for filtering -->
-             <div class = "filter-buttons">
-            <div class="mb-6 flex justify-between gap-2 border-b">
+        <div v-else>
+          <!-- Tabs for filtering -->
+          <div class="filter-tabs mb-6">
+            <div class="flex gap-2 border-b pb-2 overflow-x-auto">
               <Button 
                 v-for="tab in tabs" 
                 :key="tab.id"
                 @click="activeTab = tab.id"
                 :text="activeTab !== tab.id"
                 :outlined="activeTab !== tab.id"
-                class="flex-1"
+                :class="['tab-button', { 'active-tab': activeTab === tab.id }]"
                 :severity="activeTab === tab.id ? 'primary' : 'secondary'"
               >
                 {{ tab.label }} ({{ getRequestCount(tab.id) }})
               </Button>
             </div>
-             </div>
-            <br/>
-            <!-- No Requests Message -->
-            <div v-if="filteredRequests.length === 0" class="text-center py-12">
-              <i class="pi pi-inbox text-6xl text-surface-300 mb-4"></i>
-              <h3 class="text-xl font-semibold text-surface-700 mb-2">No Requests Found</h3>
-              <p class="text-surface-500">You haven't submitted any requests yet.</p>
-            </div>
-
-            <!-- Requests Container -->
-            <div 
-              v-else 
-              class="requests-container"
-              :class="filteredRequests.length > 5 ? 'max-h-[70vh]' : ''"
-            >
-              <!-- Request Cards -->
-              <div 
-                v-for="request in filteredRequests" 
-                :key="`${request.type}-${request.id}`"
-                class="request-card"
-                :class="getRequestTypeClass(request.type)"
-              >
-                <!-- Card Header -->
-                <div class="flex justify-between items-start mb-3">
-                  <div>
-                    <div class="flex items-center gap-2 mb-1">
-                      <i :class="getRequestIcon(request.type)" class="text-lg"></i>
-                      <span class="font-semibold text-surface-900">
-                        {{ request.type === 'available' || request.type === 'log' ? ' Available Item Request ' : ' Unavailable Item Request ' }}
-                      </span>
-                      <Badge 
-                        :value="request.status || 'pending'" 
-                        :severity="getStatusSeverity(request.status)"
-                        class="ml-2"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Request Details -->
-                <div class="space-y-2">
-                  <div v-if="request.type === 'available' || request.type === 'log'">
-                    <div class="flex items-center justify-between">
-                      <span class="text-surface-600">Model ID:</span>
-                      <span class="font-medium">{{`${request.model_id}` }}</span>
-                    </div>
-                      <div class="flex items-center justify-between">
-                      <span class="text-surface-600">Model:</span>
-                      <span class="font-medium">{{` ${request.model}` }}</span>
-                    </div>
-                  </div>
-                  <div v-else>
-                    <div class="flex items-center justify-between">
-                      <span class="text-surface-600">Model:</span>
-                      <span class="font-medium">{{ request.model}}</span>
-                    </div>
-                    <div v-if="request.description" class="flex items-center justify-between">
-                      <span class="text-surface-600">Link:</span>
-                      <span class="font-medium text-right"><a :href="request.description" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium">{{request.model || 'View Link' }} <i class="pi pi-external-link ml-1 text-xs"></i></a></span>
-                    </div>
-                  </div>
-
-                  <div class="flex items-center justify-between">
-                    <span class="text-surface-600">Quantity:</span>
-                    <Badge :value="request.quantity" severity="info" />
-                  </div>
-
-                  <div class="flex items-center justify-between">
-                    <span class="text-surface-600">Class:</span>
-                    <span class="font-medium">{{ request.class }}</span>
-                  </div>
-
-                  <div class="flex items-center justify-between">
-                    <span class="text-surface-600">Submitted:</span>
-                    <span class="font-medium">{{ formatDate(request.timestamp) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
-          <!-- Sidebar - Summary -->
-          <div class="lg:w-1/3">
-            <div class="card sticky top-6">
-              <div class="p-4 border-b">
-                <h3 class="font-semibold text-surface-900">Request Summary</h3>
+          <!-- No Requests Message -->
+          <div v-if="filteredRequests.length === 0" class="empty-state">
+            <i class="pi pi-inbox text-6xl text-surface-300 mb-4"></i>
+            <h3 class="text-xl font-semibold text-surface-700 mb-2">No Requests Found</h3>
+            <p class="text-surface-500">You haven't submitted any requests yet.</p>
+          </div>
+
+          <!-- Product Grid - Requests Cards -->
+          <div v-else class="product-grid">
+            <div 
+              v-for="request in filteredRequests" 
+              :key="request.id"
+              class="product-card"
+              :class="{ 'expanded': expandedRequestId === request.id }"
+              @click="toggleRequestExpansion(request)"
+            >
+              <!-- Product Image -->
+              <div class="product-image-container">
+                <img 
+                  :src="request.image_link || request.link || '/placeholder-image.png'" 
+                  :alt="request.model"
+                  class="product-image"
+                  @error="handleImageError"
+                />
+                <!-- Status Badge -->
+                <div class="stock-badge" :class="getStatusClass(request.status)">
+                  {{ request.status || 'pending' }}
+                </div>
               </div>
-              
-              <div class="p-4 space-y-4">
-                <!-- Summary Stats -->
-                <div>
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-surface-600">Total Requests:</span>
-                    <span class="font-semibold">{{ totalRequests }}</span>
+
+              <!-- Product Info -->
+              <div class="product-info">
+                <div class="flex justify-between items-start">
+                  <h3 class="product-title">{{ request.model || 'Unknown Item' }}</h3>
+                  <!-- Cancel button only for pending requests -->
+                  <Button 
+                    v-if="request.status?.toLowerCase() === 'pending'"
+                    icon="pi pi-times"
+                    class="cancel-button"
+                    @click.stop="openDeleteDialog(request)"
+                    :loading="deletingRequest && requestToDelete?.id === request.id"
+                    severity="danger"
+                    text
+                    rounded
+                    aria-label="Cancel Request"
+                    v-tooltip="'Cancel Request'"
+                  />
+                </div>
+                
+                <!-- Request Details -->
+                <div class="product-details">
+                  <div class="detail-item">
+                    <i class="pi pi-hashtag text-surface-400"></i>
+                    <span>Quantity: {{ request.requested_quantity }}</span>
                   </div>
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-surface-600">Available Items:</span>
-                    <span class="font-semibold text-green-600">{{ availableRequests.length }}</span>
+                  <div class="detail-item">
+                    <i class="pi pi-users text-surface-400"></i>
+                    <span>{{ request.class || 'No class specified' }}</span>
                   </div>
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-surface-600">Unavailable Items:</span>
-                    <span class="font-semibold text-orange-600">{{ missingRequests.length }}</span>
+                  <div class="detail-item">
+                    <i class="pi pi-calendar text-surface-400"></i>
+                    <span>{{ formatDate(request.timestamp) }}</span>
                   </div>
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-surface-600">Approved Items:</span>
-                    <span class="font-semibold text-blue-600">{{ logRequests.length }}</span>
+                </div>
+
+                <!-- Expanded Content -->
+                <div v-if="expandedRequestId === request.id" class="expanded-content">
+                  <!-- Additional Request Details -->
+                  <div class="additional-details">
+                    <div v-if="request.description" class="detail-row">
+                      <span class="detail-label">Description:</span>
+                      <span class="detail-value">{{ request.description }}</span>
+                    </div>
+                    <div v-if="request.student_email" class="detail-row">
+                      <span class="detail-label">Student Email:</span>
+                      <span class="detail-value">{{ request.student_email }}</span>
+                    </div>
+                    <div v-if="request.status_reason" class="detail-row">
+                      <span class="detail-label">Status Reason:</span>
+                      <span class="detail-value">{{ request.status_reason }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Request ID:</span>
+                      <span class="detail-value">{{ request.id }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Action Buttons for Pending Requests -->
+                  <div v-if="request.status?.toLowerCase() === 'pending'" class="action-buttons">
+                    <Button 
+                      label="Cancel Request"
+                      icon="pi pi-trash"
+                      class="w-full"
+                      @click.stop="openDeleteDialog(request)"
+                      :loading="deletingRequest && requestToDelete?.id === request.id"
+                      severity="danger"
+                      size="small"
+                    />
                   </div>
                 </div>
               </div>
@@ -153,24 +148,24 @@
     <Dialog 
       v-model:visible="showDeleteDialog" 
       :style="{ width: '450px' }" 
-      header="Delete Request"
+      header="Cancel Request"
       :modal="true"
     >
       <div class="confirmation-content">
         <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem; color: #ef4444;"></i>
-        <span>Are you sure you want to delete this request? This action cannot be undone.</span>
+        <span>Are you sure you want to cancel this request? This action cannot be undone.</span>
       </div>
       
       <template #footer>
         <Button 
-          label="Cancel" 
+          label="No, Keep it" 
           icon="pi pi-times" 
           @click="showDeleteDialog = false" 
           class="p-button-text"
           severity="secondary"
         />
         <Button 
-          label="Delete" 
+          label="Yes, Cancel Request" 
           icon="pi pi-trash" 
           @click="confirmDelete"
           autofocus
@@ -186,14 +181,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Badge from 'primevue/badge'
 import Toast from 'primevue/toast'
-import { useToast } from 'primevue/usetoast'
-import Navbar from '@/components/Navbar.vue'
+import ProgressSpinner from 'primevue/progressspinner'
 
 const router = useRouter()
 const toast = useToast()
@@ -202,125 +197,92 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 // State
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 const loading = ref(false)
-const availableRequests = ref([])
-const missingRequests = ref([])
-const logRequests = ref([]) // New state for approved requests from logs
+const requests = ref([])
 const activeTab = ref('all')
 const requestToDelete = ref(null)
 const showDeleteDialog = ref(false)
 const deletingRequest = ref(false)
+const expandedRequestId = ref(null)
 
 // Tabs
 const tabs = [
   { id: 'all', label: 'All Requests' },
-  { id: 'available', label: 'Available Items' },
-  { id: 'missing', label: 'Unavailable Items' },
-  { id: 'approved', label: 'Approved Items' } // New tab for approved requests
+  { id: 'pending', label: 'Pending' },
+  { id: 'approved', label: 'Approved' },
+  { id: 'rejected', label: 'Rejected' },
+  { id: 'returned', label: 'Returned' }
 ]
 
 // Computed properties
 const userEmail = computed(() => user.value?.email || '')
-const totalRequests = computed(() => availableRequests.value.length + missingRequests.value.length + logRequests.value.length)
 
-// All requests combined and sorted by timestamp (newest first)
-const allRequests = computed(() => {
-  const available = availableRequests.value.map(req => ({
-    ...req,
-    type: 'available',
-    id: req.id,
-    timestamp: req.timestamp
-  }))
-  
-  const missing = missingRequests.value.map(req => ({
-    ...req,
-    type: 'missing',
-    id: req.id,
-    timestamp: req.timestamp
-  }))
-  
-  // Add log requests with type 'log' and ensure they have approved status
-  const logs = logRequests.value.map(req => ({
-    ...req,
-    type: 'log',
-    id: req.id,
-    timestamp: req.timestamp,
-    status: 'approved' // Force status to approved for log requests
-  }))
-  
-  // Combine and sort by timestamp (newest first)
-  return [...available, ...missing, ...logs].sort((a, b) => 
-    new Date(b.timestamp) - new Date(a.timestamp)
-  )
-})
+// Filter requests by status
+const pendingRequests = computed(() => 
+  requests.value.filter(req => req.status?.toLowerCase() === 'pending')
+)
+const approvedRequests = computed(() => 
+  requests.value.filter(req => req.status?.toLowerCase() === 'approved')
+)
+const rejectedRequests = computed(() => 
+  requests.value.filter(req => req.status?.toLowerCase() === 'declined' || req.status?.toLowerCase() === 'rejected')
+)
+const returnedcomponents = computed(() => 
+  requests.value.filter(req => req.status?.toLowerCase() === 'returned')
+)
 
 // Filtered requests based on active tab
 const filteredRequests = computed(() => {
   switch (activeTab.value) {
-    case 'available':
-      return allRequests.value.filter(req => req.type === 'available')
-    case 'missing':
-      return allRequests.value.filter(req => req.type === 'missing')
+    case 'pending':
+      return pendingRequests.value
     case 'approved':
-      return allRequests.value.filter(req => req.type === 'log')
+      return approvedRequests.value
+    case 'rejected':
+      return rejectedRequests.value
+    case 'returned':
+      return returnedcomponents.value
     default:
-      return allRequests.value
+      return requests.value
   }
 })
+
+// Toggle request expansion
+const toggleRequestExpansion = (request) => {
+  if (expandedRequestId.value === request.id) {
+    expandedRequestId.value = null
+  } else {
+    expandedRequestId.value = request.id
+  }
+}
 
 // Load requests
 const loadRequests = async () => {
   loading.value = true
   try {
-    // Load available requests
-    const availableResponse = await fetch(`${apiUrl}/requests/student_req/${encodeURIComponent(userEmail.value)}`, {
+    const response = await fetch(`${apiUrl}/requests/${encodeURIComponent(userEmail.value)}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
     
-    if (availableResponse.ok) {
-      const availableData = await availableResponse.json()
-      if (availableData.success) {
-        availableRequests.value = availableData.data || []
-        // Model names are now included directly from the API via SQL JOIN
+    if (response.ok) {
+      const data = await response.json()
+      if (data.success) {
+        // Sort by timestamp (newest first)
+        requests.value = (data.data || []).sort((a, b) => 
+          new Date(b.timestamp) - new Date(a.timestamp)
+        )
+        
+        toast.add({
+          severity: 'success',
+          summary: 'Requests Loaded',
+          detail: `Loaded ${requests.value.length} requests`,
+          life: 3000
+        })
       }
+    } else {
+      throw new Error('Failed to load requests')
     }
-    
-    // Load missing requests
-    const missingResponse = await fetch(`${apiUrl}/missing/student_mis/${encodeURIComponent(userEmail.value)}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-    
-    if (missingResponse.ok) {
-      const missingData = await missingResponse.json()
-      if (missingData.success) {
-        missingRequests.value = missingData.data || []
-      }
-    }
-    
-    // Load approved requests from logs
-    const logsResponse = await fetch(`${apiUrl}/logs/student/${encodeURIComponent(userEmail.value)}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-    
-    if (logsResponse.ok) {
-      const logsData = await logsResponse.json()
-      if (logsData.success) {
-        logRequests.value = logsData.data || []
-      }
-    }
-    
-    toast.add({
-      severity: 'success',
-      summary: 'Requests Loaded',
-      detail: `Loaded ${totalRequests.value} requests`,
-      life: 3000
-    })
-    
   } catch (error) {
     console.error('Error loading requests:', error)
     toast.add({
@@ -337,40 +299,22 @@ const loadRequests = async () => {
 // Helper functions
 const getRequestCount = (tabId) => {
   switch (tabId) {
-    case 'available': return availableRequests.value.length
-    case 'missing': return missingRequests.value.length
-    case 'approved': return logRequests.value.length
-    default: return totalRequests.value
+    case 'pending': return pendingRequests.value.length
+    case 'approved': return approvedRequests.value.length
+    case 'rejected': return rejectedRequests.value.length
+    case 'returned': return returnedcomponents.value.length
+    default: return requests.value.length
   }
 }
 
-const getRequestTypeClass = (type) => {
-  if (type === 'available') {
-    return 'border-l-4 border-green-500'
-  } else if (type === 'missing') {
-    return 'border-l-4 border-orange-500'
-  } else {
-    return 'border-l-4 border-blue-500' // For log/approved requests
-  }
-}
-
-const getRequestIcon = (type) => {
-  if (type === 'available') {
-    return 'pi pi-check-circle text-green-500'
-  } else if (type === 'missing') {
-    return 'pi pi-question-circle text-orange-500'
-  } else {
-    return 'pi pi-check-circle text-blue-500' // For log/approved requests
-  }
-}
-
-const getStatusSeverity = (status) => {
+const getStatusClass = (status) => {
   switch (status?.toLowerCase()) {
-    case 'approved': return 'success'
-    case 'pending': return 'warning'
-    case 'rejected': return 'danger'
-    case 'fulfilled': return 'info'
-    default: return null
+    case 'approved': return 'in-stock'
+    case 'pending': return 'low-stock'
+    case 'rejected': 
+    case 'declined': return 'out-of-stock'
+    case 'returned': return 'returned-stock'
+    default: return 'low-stock'
   }
 }
 
@@ -386,27 +330,30 @@ const formatDate = (dateString) => {
   })
 }
 
+const handleImageError = (event) => {
+  event.target.src = '/placeholder-image.png'
+}
+
+const openDeleteDialog = (request) => {
+  if (request.status?.toLowerCase() !== 'pending') {
+    toast.add({
+      severity: 'info',
+      summary: 'Cannot Cancel',
+      detail: 'Only pending requests can be cancelled',
+      life: 3000
+    })
+    return
+  }
+  requestToDelete.value = request
+  showDeleteDialog.value = true
+}
+
 const confirmDelete = async () => {
   if (!requestToDelete.value) return
   
   deletingRequest.value = true
   try {
-    const endpoint = requestToDelete.value.type === 'available' 
-      ? '/requests' 
-      : '/missing'
-    
-    // Note: Log requests might not support deletion, so we only handle available and missing
-    if (requestToDelete.value.type === 'log') {
-      toast.add({
-        severity: 'info',
-        summary: 'Cannot Delete',
-        detail: 'Approved requests cannot be deleted from logs',
-        life: 3000
-      })
-      return
-    }
-    
-    const response = await fetch(`${apiUrl}${endpoint}/${requestToDelete.value.id}`, {
+    const response = await fetch(`${apiUrl}/requests/${requestToDelete.value.id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -416,30 +363,33 @@ const confirmDelete = async () => {
     if (response.ok) {
       toast.add({
         severity: 'success',
-        summary: 'Request Deleted',
-        detail: 'Your request has been deleted successfully',
+        summary: 'Request Cancelled',
+        detail: 'Your request has been cancelled successfully',
         life: 3000
       })
       
       // Remove from local state
-      if (requestToDelete.value.type === 'available') {
-        availableRequests.value = availableRequests.value.filter(
-          req => req.id !== requestToDelete.value.id
-        )
-      } else if (requestToDelete.value.type === 'missing') {
-        missingRequests.value = missingRequests.value.filter(
-          req => req.id !== requestToDelete.value.id
-        )
+      requests.value = requests.value.filter(
+        req => req.id !== requestToDelete.value.id
+      )
+      
+      // Update cart count if needed
+      localStorage.setItem('cartCount', requests.value.length.toString())
+      window.dispatchEvent(new CustomEvent('cart-updated'))
+      
+      // Close expanded view if the deleted request was expanded
+      if (expandedRequestId.value === requestToDelete.value.id) {
+        expandedRequestId.value = null
       }
     } else {
-      throw new Error('Failed to delete request')
+      throw new Error('Failed to cancel request')
     }
   } catch (error) {
-    console.error('Error deleting request:', error)
+    console.error('Error cancelling request:', error)
     toast.add({
       severity: 'error',
-      summary: 'Delete Failed',
-      detail: 'Failed to delete request',
+      summary: 'Cancel Failed',
+      detail: 'Failed to cancel request',
       life: 5000
     })
   } finally {
@@ -462,7 +412,6 @@ onMounted(() => {
 })
 
 // Cleanup
-import { onUnmounted } from 'vue'
 onUnmounted(() => {
   window.removeEventListener('cart-updated', loadRequests)
 })
@@ -472,227 +421,276 @@ onUnmounted(() => {
 .cart-view {
   min-height: 100vh;
   width: 100%;
-  overflow-x: hidden; /* Prevent horizontal scroll */
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  box-sizing: border-box; /* Include padding in width calculation */
-}
-
-/* Container to prevent any horizontal overflow */
-.cart-view > * {
-  max-width: 100%;
   overflow-x: hidden;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  box-sizing: border-box;
+  padding: 1.5rem;
 }
 
-.requests-container {
+.header-section {
+  margin-bottom: 2rem;
+}
+
+.filter-tabs {
+  width: 100%;
+}
+
+.tab-button {
+  white-space: nowrap;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.active-tab {
+  font-weight: 600;
+}
+
+/* Product Grid Styles - Copied from Home.vue */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.product-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.product-card.expanded {
+  border-color: #3b82f6;
+  background-color: #f8fafc;
+}
+
+.product-image-container {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-image {
+  transform: scale(1.05);
+}
+
+.stock-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  text-transform: capitalize;
+}
+
+.stock-badge.in-stock {
+  background-color: #10b981;
+}
+
+.stock-badge.low-stock {
+  background-color: #f59e0b;
+}
+
+.stock-badge.out-of-stock {
+  background-color: #ef4444;
+}
+
+.stock-badge.returned-stock {
+  background-color: #3b82f6;
+}
+
+.product-info {
+  padding: 1rem;
+}
+
+.product-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+  padding-right: 2rem;
+}
+
+.cancel-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}
+
+.product-details {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  overflow-y: auto;
-  padding-right: 0.5rem;
-  width: 100%;
-  box-sizing: border-box;
-  max-width: 100%; /* Prevent overflow */
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
-.request-card {
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.detail-item i {
+  font-size: 0.875rem;
+}
+
+/* Expanded Content */
+.expanded-content {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.additional-details {
+  background: #f1f5f9;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.detail-value {
+  color: #334155;
+  text-align: right;
+}
+
+.action-buttons {
+  margin-top: 0.5rem;
+}
+
+/* Card styles */
+.card {
   background: white;
-  border-radius: 0.5rem;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s;
-  position: relative;
-  width: 100%;
-  box-sizing: border-box;
-  max-width: 100%; /* Prevent overflow */
-  overflow: hidden; /* Contain any overflowing content */
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
 }
 
-.request-card:hover {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  color: #1e293b;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.empty-state p {
+  color: #64748b;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.loading-state p {
+  margin-top: 1rem;
+  color: #64748b;
 }
 
 .confirmation-content {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  max-width: 100%;
 }
 
-/* Force all content inside request cards to wrap */
-.request-card * {
-  max-width: 100%;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
+/* Summary Cards */
+.summary-cards {
+  margin-top: 2rem;
 }
 
-/* Scrollbar styling */
-.requests-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.requests-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.requests-container::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.requests-container::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
-}
-
-/* FIXED: Filter buttons - properly responsive */
-.filter-buttons {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem; /* Reduced gap for mobile */
-  width: 100%;
-  flex-wrap: nowrap; /* Keep buttons in a row */
-  overflow-x: auto; /* Allow horizontal scroll for buttons if needed */
-  padding-bottom: 0.5rem; /* Space for scrollbar */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-}
-
-/* Individual button styling */
-.filter-buttons button,
-.filter-buttons .p-button {
-  flex: 1; /* Make buttons take equal space */
-  min-width: 0; /* Allow buttons to shrink */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 0.85rem; /* Smaller font on mobile */
-  padding: 0.5rem 0.75rem;
-}
-
-/* Hide scrollbar for buttons when not scrolling */
-.filter-buttons::-webkit-scrollbar {
-  height: 3px;
-}
-
-.filter-buttons::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.filter-buttons::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-/* Responsive design */
+/* Responsive Design */
 @media (max-width: 768px) {
   .cart-view {
-    width: 100vw;
-    max-width: 100vw;
-    padding: 0;
-    margin: 0;
-    position: relative;
-    left: 0;
-    right: 0;
+    padding: 1rem;
   }
   
-  /* Nuclear option to kill horizontal scroll */
-  body, html {
-    max-width: 100vw;
-    overflow-x: hidden;
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
   }
   
-  .requests-container {
-    max-height: 60vh;
-    width: 100vw;
-    max-width: 100vw;
-    padding: 0 0.75rem 0.5rem 0.75rem;
-    margin: 0;
-    overflow-x: hidden; /* Prevent horizontal scroll in container */
+  .filter-tabs {
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
   }
   
-  .request-card {
-    padding: 0.75rem;
-    width: 100%;
-    margin: 0;
-    border-radius: 0.375rem;
-  }
-  
-  /* FIXED: Button layout for mobile */
-  .filter-buttons {
-    display: grid !important; /* Use grid for better control */
-    grid-template-columns: repeat(4, 1fr); /* 4 equal columns for 4 tabs */
-    gap: 0.375rem; /* Smaller gap */
-    padding: 0 0.75rem 0.75rem 0.75rem;
-    overflow-x: visible; /* No scroll needed with grid */
-    flex-wrap: nowrap;
-  }
-  
-  .filter-buttons button,
-  .filter-buttons .p-button {
-    width: 100%;
-    min-width: 0;
-    padding: 0.375rem 0.5rem;
+  .tab-button {
     font-size: 0.8rem;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  /* Ensure all content fits */
-  .cart-view > * {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    box-sizing: border-box;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-  }
-  
-  /* Fix any PrimeVue components */
-  :deep(.p-button) {
-    max-width: 100%;
-  }
-  
-  :deep(.p-element) {
-    max-width: 100%;
+    padding: 0.4rem 0.75rem;
   }
 }
 
-/* Extra small devices (very narrow phones) */
 @media (max-width: 480px) {
-  .request-card {
-    padding: 0.5rem;
+  .product-grid {
+    grid-template-columns: 1fr;
   }
   
-  .requests-container {
-    padding: 0 0.5rem 0.5rem 0.5rem;
-  }
-  
-  /* Adjust buttons for very small screens */
-  .filter-buttons {
-    grid-template-columns: 1fr 1fr; /* 2 columns on very small screens */
-    gap: 0.25rem;
-    padding: 0 0.5rem 0.5rem 0.5rem;
-  }
-  
-  .filter-buttons button,
-  .filter-buttons .p-button {
-    width: 100%;
-    padding: 0.5rem;
-    font-size: 0.75rem;
-  }
-}
-
-/* Small tablets */
-@media (min-width: 481px) and (max-width: 768px) {
-  .filter-buttons {
-    gap: 0.5rem;
-    padding: 0 1rem 1rem 1rem;
-  }
-  
-  .filter-buttons button,
-  .filter-buttons .p-button {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
+  .summary-cards {
+    grid-template-columns: 1fr 1fr !important;
   }
 }
 </style>
