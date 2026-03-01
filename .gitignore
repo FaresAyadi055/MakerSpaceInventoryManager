@@ -44,3 +44,5 @@ __screenshots__/
 /frontend/node_modules
 /frontend/.vscode
 /frontend/.env
+
+.nuxt
