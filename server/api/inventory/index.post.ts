@@ -32,7 +32,6 @@ export default defineEventHandler(async (event) => {
     let body
     try {
       body = await readBody(event)
-      console.log('Received create body:', body)
     } catch (bodyError) {
       console.error('Error reading body:', bodyError)
       throw createError({
@@ -118,8 +117,6 @@ export default defineEventHandler(async (event) => {
 
     // Commit transaction
     await session.commitTransaction()
-
-    console.log(`✅ Component created: ${newComponent.model} by ${currentUser.email}`)
 
     return {
       success: true,

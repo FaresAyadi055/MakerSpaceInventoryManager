@@ -180,7 +180,15 @@ import ProgressSpinner from 'primevue/progressspinner'
 
 const router = useRouter()
 const toast = useToast()
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+const config = useRuntimeConfig()
+const apiUrl = config.public.API_URL || 'http://localhost:4000/api'
+
+// Define page meta
+definePageMeta({
+  layout: 'default',
+  middleware: 'auth',
+  requiresAuth: true
+})
 
 // State
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))

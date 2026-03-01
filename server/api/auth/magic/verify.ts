@@ -1,3 +1,4 @@
+//api/auth/magic/verify.ts
 import { defineEventHandler, readBody, createError } from 'h3'
 import jwt from 'jsonwebtoken'
 import User from '~/server/models/Users'
@@ -102,7 +103,7 @@ export default defineEventHandler(async (event) => {
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     )
-
+    console.log("token: ", token)
     // Return user data and token
     return {
       success: true,
@@ -117,7 +118,6 @@ export default defineEventHandler(async (event) => {
         }
       }
     }
-
   } catch (error: any) {
     console.error('Magic verification error:', error)
 

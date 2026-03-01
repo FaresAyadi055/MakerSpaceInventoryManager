@@ -723,7 +723,6 @@ const approveSelectedRequest = () => {
           quantity: request.quantity
         }
         
-        console.log('Creating log entry:', logData)
         
         const logResponse = await fetch(apiUrl + '/logs/', {
           method: 'POST',

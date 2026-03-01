@@ -56,62 +56,41 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 
 const toast = useToast()
 const config = useRuntimeConfig()
-
-// API URL from runtime config - using your variable names
 const apiUrl = config.public.API_URL || 'http://localhost:4000/api'
-const magicPublishableKey = config.public.MAGIC_PUBLISHABLE_KEY
-
-// Debug mode - set to false in production
-const debug = true
-
-// Check if Magic key exists
-const magicKeyExists = computed(() => !!magicPublishableKey)
 
 // Magic SDK instance
 let magic = null
 const email = ref('')
 const loading = ref(false)
 const emailError = ref('')
-const initError = ref('')
+const magicInitialized = ref(false)
 
-// Email validation
-const validateEmail = () => {
-  emailError.value = ''
-  
-  if (!email.value) {
-    emailError.value = 'Email is required'
-    return false
-  }
-  
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@(medtech|smu)\.tn$/i
-  if (!emailRegex.test(email.value)) {
-    emailError.value = 'Please use a valid @medtech.tn or @smu.tn email'
-    return false
-  }
-  
-  return true
-}
-
-// Initialize Magic with better error handling
+// Initialize Magic with better error handling and force reinit
 const initMagic = async () => {
-  if (!magicPublishableKey) {
-    initError.value = 'Magic Publishable Key is missing in environment variables'
-    console.error('Magic Publishable Key is missing. Check your .env file:', {
-      exists: !!magicPublishableKey,
-      key: magicPublishableKey ? 'present' : 'missing'
-    })
-    
-    toast.add({
-      severity: 'error',
-      summary: 'Configuration Error',
-      detail: 'Authentication service not configured properly',
-      life: 5000
-    })
+  // Check if we need to force reinitialization
+  const forceLogout = sessionStorage.getItem('force_magic_logout')
+  if (forceLogout === 'true') {
+
+    // Clear any existing Magic instances
+    if (window.magic) {
+      try {
+        await window.magic.user.logout()
+      } catch (e) {
+        console.log('Error during forced logout:', e)
+      }
+      window.magic = null
+    }
+    magic = null
+    sessionStorage.removeItem('force_magic_logout')
+  }
+
+  if (!config.public.MAGIC_PUBLISHABLE_KEY) {
+    console.error('Magic Publishable Key is missing')
     return false
   }
 
@@ -120,25 +99,25 @@ const initMagic = async () => {
     // Dynamic import of Magic SDK
     const { Magic } = await import('magic-sdk')
     
-    // Initialize Magic with the publishable key
-    magic = new Magic(magicPublishableKey)
+    // Create new instance
+    magic = new Magic(config.public.MAGIC_PUBLISHABLE_KEY)
     
-    initError.value = ''
+    // Store globally
+    window.magic = magic
+    
+    // Check if user is already logged in with Magic
+    const isLoggedIn = await magic.user.isLoggedIn()
+    
+    if (isLoggedIn) {
+      await magic.user.logout()
+    }
+    
+    magicInitialized.value = true
     return true
-  } catch (error) {
-    initError.value = error.message || 'Failed to initialize Magic'
-    console.error('Failed to initialize Magic SDK:', {
-      error: error.message,
-      stack: error.stack,
-      key: magicPublishableKey ? 'present' : 'missing'
-    })
     
-    toast.add({
-      severity: 'error',
-      summary: 'Setup Error',
-      detail: 'Failed to initialize authentication service: ' + error.message,
-      life: 5000
-    })
+  } catch (error) {
+    console.error('Failed to initialize Magic SDK:', error)
+    magicInitialized.value = false
     return false
   }
 }
@@ -147,15 +126,15 @@ const initMagic = async () => {
 const loginWithMagic = async () => {
   if (!validateEmail()) return
   
-  // Check if Magic is initialized
-  if (!magic) {
-    console.log('Magic not initialized, attempting to initialize...')
+  // Reinitialize Magic if needed
+  if (!magic || !magicInitialized.value) {
+
     const initialized = await initMagic()
     if (!initialized) {
       toast.add({
         severity: 'error',
         summary: 'Setup Error',
-        detail: initError.value || 'Authentication service not initialized',
+        detail: 'Authentication service not initialized',
         life: 3000
       })
       return
@@ -167,26 +146,28 @@ const loginWithMagic = async () => {
   
   try {
     
-    // Step 1: First, check if user exists in your backend
+    // First, check if user exists
     const userCheck = await $fetch(`${apiUrl}/auth/login`, {
       method: 'POST',
       body: { email: email.value }
     }).catch(err => {
       console.error('Login endpoint error:', err)
-      throw new Error('Failed to connect to server. Please check if backend is running.')
+      throw new Error('Failed to connect to server')
     })
     
     if (!userCheck.success) {
       throw new Error(userCheck.message || 'Failed to initiate login')
     }
     
+
     
-    // Step 2: Show Magic OTP popup
+    // Show Magic OTP popup
     const didToken = await magic.auth.loginWithEmailOTP({
       email: email.value
     })
     
-    // Step 3: Verify the DID token with your backend
+    
+    // Verify with backend
     const verifyData = await $fetch(`${apiUrl}/auth/magic/verify`, {
       method: 'POST',
       body: { didToken }
@@ -202,32 +183,11 @@ const loginWithMagic = async () => {
     console.error('Login error:', error)
     
     // Handle specific Magic errors
-    if (error.message?.includes('Magic RPC Error')) {
-      toast.add({
-        severity: 'error',
-        summary: 'Magic Error',
-        detail: 'Please check your Magic publishable key configuration',
-        life: 5000
-      })
-    } else if (error.message?.includes('Failed to fetch') || error.message?.includes('connect to server')) {
-      toast.add({
-        severity: 'error',
-        summary: 'Connection Error',
-        detail: 'Cannot connect to server. Please check if backend is running.',
-        life: 5000
-      })
-    } else if (error.code === 'MAGIC_EMAIL_OTP_CANCELLED' || error.message?.includes('cancelled')) {
+    if (error.message?.includes('Magic RPC Error') || error.code === 'MAGIC_EMAIL_OTP_CANCELLED') {
       toast.add({
         severity: 'info',
         summary: 'Login Cancelled',
         detail: 'You cancelled the login process',
-        life: 3000
-      })
-    } else if (error.code === 'MAGIC_EMAIL_OTP_EXPIRED') {
-      toast.add({
-        severity: 'warn',
-        summary: 'Code Expired',
-        detail: 'The verification code expired. Please try again.',
         life: 3000
       })
     } else {
@@ -235,7 +195,7 @@ const loginWithMagic = async () => {
         severity: 'error',
         summary: 'Login Failed',
         detail: error.data?.message || error.message || 'Failed to login',
-        life: 3000
+        life: 5000
       })
     }
   } finally {
@@ -262,6 +222,9 @@ const handleLoginSuccess = (data) => {
   localStorage.setItem('token', token)
   localStorage.setItem('user', JSON.stringify(user))
   
+  // Clear force logout flag
+  sessionStorage.removeItem('force_magic_logout')
+  
   toast.add({
     severity: 'success',
     summary: 'Welcome!',
@@ -269,25 +232,53 @@ const handleLoginSuccess = (data) => {
     life: 2000
   })
   
-  // Redirect to home page
+  // Redirect to home
   setTimeout(() => {
     navigateTo('/home')
   }, 1500)
 }
 
+// Email validation
+const validateEmail = () => {
+  emailError.value = ''
+  
+  if (!email.value) {
+    emailError.value = 'Email is required'
+    return false
+  }
+  
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@(medtech|smu)\.tn$/i
+  if (!emailRegex.test(email.value)) {
+    emailError.value = 'Please use a valid @medtech.tn or @smu.tn email'
+    return false
+  }
+  
+  return true
+}
+
 // Initialize on mount
 onMounted(async () => {
   
-  await initMagic()
+  // Check if we're coming from logout
+  const fromLogout = sessionStorage.getItem('force_magic_logout')
+  if (fromLogout === 'true') {
+    // Clear any existing Magic instances
+    if (window.magic) {
+      try {
+        await window.magic.user.logout()
+      } catch (e) {}
+      window.magic = null
+    }
+    magic = null
+  }
   
-  // Clear any existing auth state
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
+  await initMagic()
 })
 
-// Define page meta
 definePageMeta({
-  layout: 'auth'
+  layout: 'auth',
+  middleware: 'auth',
+  requiresGuest: true
 })
 </script>
 

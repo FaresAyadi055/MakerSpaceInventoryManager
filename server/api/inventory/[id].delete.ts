@@ -105,7 +105,6 @@ export default defineEventHandler(async (event) => {
     // Commit transaction
     await session.commitTransaction()
 
-    console.log(`✅ Component deleted: ${component.model} by ${currentUser.email}`)
 
     return {
       success: true,

@@ -89,12 +89,12 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import Button from 'primevue/button'
 import Avatar from 'primevue/avatar'
-
 // ✅ These are auto-imported by Nuxt, no need to import from 'vue-router'
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
-
+const config = useRuntimeConfig()
+const isLoggingOut = ref(false)
 // Rest of your code remains the same...
 // Flag to track if router is ready
 const isRouterReady = ref(false)
@@ -292,52 +292,70 @@ const userEmail = computed(() => {
 
 // Logout function
 const logout = async () => {
+  isLoggingOut.value = true
+  
   try {
-    // 1. Set session flag to indicate we're logging out
-    sessionStorage.setItem('from_logout', 'true')
-
-    // 2. Clear ALL storage more aggressively
-    const allKeys = Object.keys(localStorage)
-    allKeys.forEach(key => {
-      if (key !== 'token' && key !== 'user') {
-        // Keep other keys if needed
-      } else {
-        localStorage.removeItem(key)
+    const token = localStorage.getItem('token')
+    const apiUrl = config.public.API_URL || 'http://localhost:4000/api'
+    
+    // Try to call backend logout (optional - won't break if fails)
+    if (token) {
+      try {
+        await $fetch(`${apiUrl}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          // Don't throw on error
+          ignoreResponseError: true
+        })
+      } catch (e) {
       }
-    })
-
-    // Clear token and user
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-
-    // 3. Clear sessionStorage except our logout flag
-    const sessionKeys = Object.keys(sessionStorage).filter(key =>
-      !key.includes('logout')
-    )
-    sessionKeys.forEach(key => sessionStorage.removeItem(key))
-
-    toast?.add({
-      severity: 'success',
-      summary: 'Logged out',
-      detail: 'You have been logged out successfully',
-      life: 2000
-    })
-
-    // 4. Redirect to login
-    setTimeout(() => {
-      if (router) {
-        router.push('/login')
+    }
+    
+    // Clear Magic client session if exists
+    if (window.magic) {
+      try {
+        await window.magic.user.logout()
+      } catch (magicError) {
       }
-    }, 500)
-
+    }
+    
   } catch (error) {
     console.error('Logout error:', error)
-    toast?.add({
-      severity: 'error',
-      summary: 'Logout Failed',
-      detail: 'There was an error logging out',
+  } finally {
+    // ALWAYS clear local storage - this is the most important part
+    
+    // Clear all auth-related items
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    localStorage.removeItem('cartCount')
+    
+    // Clear any Magic-specific items
+    const magicKeys = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && (key.startsWith('magic') || key.startsWith('__magic') || key.includes('did'))) {
+        magicKeys.push(key)
+      }
+    }
+    magicKeys.forEach(key => localStorage.removeItem(key))
+    
+    // Clear session storage
+    sessionStorage.clear()
+    
+    // Show success message
+    toast.add({
+      severity: 'success',
+      summary: 'Logged Out',
+      detail: 'You have been successfully logged out',
       life: 3000
     })
+    isLoggingOut.value = false
+    // Redirect to login
+    await router.push('/login')
+    
+    isLoggingOut.value = false
   }
 }
 </script>

@@ -627,7 +627,7 @@ import { exportCSV } from '~/utils/exportCSV.js'
 const router = useRouter()
 const toast = useToast()
 const config = useRuntimeConfig()
-const apiUrl = config.public.apiUrl || 'http://localhost:4000/api'
+const apiUrl = config.public.API_URL || 'http://localhost:4000/api'
 
 // State
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
@@ -1379,7 +1379,8 @@ const formatDate = (dateString) => {
 // Define page meta for layout/navigation
 definePageMeta({
   layout: 'default',
-  middleware: 'auth'
+  middleware: 'auth',
+  requiresAuth: true
 })
 </script>
 <style scoped>

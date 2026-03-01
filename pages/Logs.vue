@@ -597,7 +597,6 @@ const loadData = async () => {
     }
     
     const data = await response.json()
-    console.log(data)
     if (data.success && data.data) {
       logs.value = data.data.sort((a, b) => (b.id || 0) - (a.id || 0))
       
@@ -1017,7 +1016,6 @@ const returnSelectedItem = () => {
     async () => {
       try {
         // First, update the log status to 'returned'
-        console.log(`${apiUrl}/inventory/add/${selectedLog.value.model_id}`)
         selectedLog.value.class_name = selectedLog.value.class
         const updateLogResponse = await fetch(`${apiUrl}/logs/${selectedLog.value.id}`, {
           method: 'PUT',
