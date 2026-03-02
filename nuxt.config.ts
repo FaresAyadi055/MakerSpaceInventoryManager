@@ -27,7 +27,7 @@ export default defineNuxtConfig({
       include: ['Tooltip']
     },
     components: {
-      include: ['Button', 'Avatar', 'Toast', 'InputText', 'InputNumber', 'Textarea', 'Select', 'Dialog', 'Badge', 'ProgressSpinner', 'Tag']
+      include: ['Button', 'Avatar', 'Toast', 'InputText', 'InputNumber', 'Textarea', 'Select', 'Dialog', 'Badge', 'ProgressSpinner', 'Tag', 'DataTable', 'Column', 'Image']
     }
   },
   

@@ -115,8 +115,9 @@ const adminLinks = [
   { path: '/logs', name: 'Logs', icon: 'pi pi-history' },
   { path: '/requests', name: 'Requests', icon: 'pi pi-inbox' },
   //{ path: '/missing', name: 'Missing Items', icon: 'pi pi-question-circle' },
-  { path: '/purchase-list', name: 'Purchase List', icon: 'pi pi-list-check' },
-  { path: '/admin', name: 'Admins', icon: 'pi pi-cog' },
+  { path: '/returns', name: 'returns', icon: 'pi pi-cart-arrow-down' },
+  { path: '/PurchaseList', name: 'Purchase List', icon: 'pi pi-list-check' },
+  { path: '/Users', name: 'Users', icon: 'pi pi-user' },
 ]
 
 // Event handler for cart updates

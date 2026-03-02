@@ -1,6 +1,5 @@
 <template>
   <div class="purchase-list-view">
-    <Navbar />
     
     <div class="main-container">
       <div class="content-wrapper">
@@ -46,7 +45,7 @@
                 label="Export CSV"
                 icon="pi pi-file-export" 
                 class="ml-4"
-                @click="exportCSV(filteredRequests, 'requests_export.csv')"
+                @click="exportCSV(filteredPurchaseList, 'purchase_list_export.csv')"
               />
             </div>
           </div>
@@ -69,66 +68,38 @@
                 currentPageReportTemplate="Showing {first} to {last} of {totalRecords} items"
                 responsiveLayout="scroll"
                 class="p-datatable-sm"
-                sortField="needed_to_purchase"
+                sortField="suggestedPurchaseQuantity"
                 :sortOrder="-1"
               >
-                <!-- ID Column -->
-                <Column field="id" header="ID" :sortable="true">
-                  <template #body="{ data }">
-                    <Badge :value="data.id" severity="info" />
-                  </template>
-                </Column>
+                <!-- Component Name Column -->
+                <Column field="model" header="Component Name" :sortable="true" />
 
-                <!-- Model Column -->
-                <Column field="model" header="Model" :sortable="true" />
-
-                <!-- Description Column -->
-                <Column field="description" header="Description" :sortable="true" />
-
-                <!-- Location Column -->
-                <Column field="location" header="Location" :sortable="true">
-                  <template #body="{ data }">
-                    <Badge :value="data.location" severity="info" />
-                  </template>
-                </Column>
-
-                <!-- Stock Column -->
-                <Column field="stock" header="Stock" :sortable="true">
+                <!-- In Stock Column -->
+                <Column field="inStock" header="In Stock" :sortable="true">
                   <template #body="{ data }">
                     <Badge 
-                      :value="data.stock" 
-                      :severity="getStockSeverity(data.stock)"
+                      :value="data.inStock" 
+                      :severity="getStockSeverity(data.inStock)"
                     />
                   </template>
                 </Column>
 
                 <!-- Total Requested Column -->
-                <Column field="total_requested" header="Total Requested" :sortable="true">
+                <Column field="totalRequested" header="Total Requested" :sortable="true">
                   <template #body="{ data }">
                     <Badge 
-                      :value="data.total_requested" 
+                      :value="data.totalRequested" 
                       severity="warning"
                     />
                   </template>
                 </Column>
 
-                <!-- Needed to Purchase Column -->
-                <Column field="needed_to_purchase" header="Minimum Purchase qty" :sortable="true">
+                <!-- Suggested Purchase Quantity Column -->
+                <Column field="suggestedPurchaseQuantity" header="Suggested Purchase Qty" :sortable="true">
                   <template #body="{ data }">
                     <Badge 
-                      :value="data.needed_to_purchase" 
-                      :severity="getPurchaseSeverity(data.needed_to_purchase)"
-                    />
-                  </template>
-                </Column>
-
-                <!-- Status Column -->
-                <Column field="needed_to_purchase" header="Status" :sortable="true">
-                  <template #body="{ data }">
-                    <Tag 
-                      :value="getStatusText(data.needed_to_purchase, data.stock)" 
-                      :severity="getStatusSeverity(data.needed_to_purchase, data.stock)"
-                      rounded
+                      :value="data.suggestedPurchaseQuantity" 
+                      :severity="getPurchaseSeverity(data.suggestedPurchaseQuantity)"
                     />
                   </template>
                 </Column>
@@ -179,7 +150,11 @@ import { exportCSV } from '@/utils/exportCSV.js'
 
 const router = useRouter()
 const toast = useToast()
-const baseURL = import.meta.env.VITE_API_URL
+// Remove the useRuntimeConfig as it might not be available
+// const config = useRuntimeConfig()
+// const apiBase = computed(() => (config.public?.API_URL || '').replace(/\/$/, '') || '')
+const apiBase = '' // Set this based on your environment
+const apiUrl = (path) => apiBase ? `${apiBase}/${path}` : `/api/${path}`
 
 // State
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
@@ -192,17 +167,16 @@ onMounted(() => {
   loadData()
 })
 
-// Check if user is admin
-const checkAdminAccess = () => {
+function checkAdminAccess () {
   const userRole = user.value?.role
-  if (userRole !== 'admin') {
+  if (userRole !== 'admin' && userRole !== 'superadmin' && userRole !== 'instructor') {
     toast.add({
       severity: 'error',
       summary: 'Access Denied',
-      detail: 'Only administrators can access this page',
+      detail: 'Only technicians or administrators can access this page',
       life: 3000
     })
-    router.push('/')
+    router.push('/home')
   }
 }
 
@@ -210,24 +184,11 @@ const checkAdminAccess = () => {
 const totalItems = computed(() => purchaseList.value.length)
 
 const urgentPurchaseItems = computed(() => {
-  return purchaseList.value.filter(item => {
-    const needed = parseInt(item.needed_to_purchase) || 0
-    return needed > 0
-  }).length
-})
-
-const pendingRequests = computed(() => {
-  return purchaseList.value.reduce((sum, item) => {
-    const count = parseInt(item.request_count) || 0
-    return sum + count
-  }, 0)
+  return purchaseList.value.filter(item => (item.suggestedPurchaseQuantity || 0) > 0).length
 })
 
 const totalNeededToPurchase = computed(() => {
-  return purchaseList.value.reduce((sum, item) => {
-    const needed = parseInt(item.needed_to_purchase) || 0
-    return sum + needed
-  }, 0)
+  return purchaseList.value.reduce((sum, item) => sum + (item.suggestedPurchaseQuantity || 0), 0)
 })
 
 // Filter purchase list based on search
@@ -245,46 +206,40 @@ const filteredPurchaseList = computed(() => {
   })
 })
 
-// Load data
 const loadData = async () => {
   loading.value = true
   try {
-    const response = await fetch(baseURL + '/complex', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
+    const token = localStorage.getItem('token')
+    
+    // Remove the TypeScript generic syntax
+    const res = await $fetch(apiUrl('admin/purchase-list'), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
     })
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        router.push('/login')
-        return
-      }
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    
-    if (data.success && data.data) {
-      purchaseList.value = data.data
-      
+
+    if (res?.success && Array.isArray(res.data)) {
+      purchaseList.value = res.data
       toast.add({
         severity: 'success',
         summary: 'Data Loaded',
-        detail: `Loaded ${data.data.length} purchase recommendations`,
+        detail: `Loaded ${res.data.length} items`,
         life: 3000
       })
     } else {
-      throw new Error(data.message || 'Failed to load data')
+      throw new Error('Invalid response format')
     }
   } catch (error) {
-    console.error('Error loading purchase list:', error)
+    // Check for 401
+    if (error?.response?.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      router.push('/login')
+      return
+    }
+
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: error.message || 'Failed to load purchase list data',
+      detail: error?.data?.message || error?.message || 'Failed to load purchase list',
       life: 5000
     })
   } finally {
@@ -312,35 +267,6 @@ const getPurchaseSeverity = (needed) => {
   return 'success'
 }
 
-const getStatusText = (needed, stock) => {
-  const neededNum = parseInt(needed) || 0
-  const stockNum = parseInt(stock) || 0
-  
-  if (neededNum > 0) {
-    return 'URGENT - Purchase Needed'
-  } else if (stockNum === 0) {
-    return 'OUT OF STOCK'
-  } else if (stockNum < 5) {
-    return 'LOW STOCK'
-  } else {
-    return 'STOCK OK'
-  }
-}
-
-const getStatusSeverity = (needed, stock) => {
-  const neededNum = parseInt(needed) || 0
-  const stockNum = parseInt(stock) || 0
-  
-  if (neededNum > 0) {
-    return 'danger'
-  } else if (stockNum === 0) {
-    return 'danger'
-  } else if (stockNum < 5) {
-    return 'warning'
-  } else {
-    return 'success'
-  }
-}
 </script>
 
 <style scoped>
