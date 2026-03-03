@@ -1,4 +1,5 @@
 <!-- pages/login.vue -->
+<!-- pages/login.vue -->
 <template>
   <div class="login-container">
     <div class="login-card">
@@ -70,32 +71,14 @@ const loading = ref(false)
 const emailError = ref('')
 const magicInitialized = ref(false)
 
-// Initialize Magic with better error handling and force reinit
+// Initialize Magic
 const initMagic = async () => {
-  // Check if we need to force reinitialization
-  const forceLogout = sessionStorage.getItem('force_magic_logout')
-  if (forceLogout === 'true') {
-
-    // Clear any existing Magic instances
-    if (window.magic) {
-      try {
-        await window.magic.user.logout()
-      } catch (e) {
-        console.log('Error during forced logout:', e)
-      }
-      window.magic = null
-    }
-    magic = null
-    sessionStorage.removeItem('force_magic_logout')
-  }
-
   if (!config.public.MAGIC_PUBLISHABLE_KEY) {
     console.error('Magic Publishable Key is missing')
     return false
   }
 
   try {
-    
     // Dynamic import of Magic SDK
     const { Magic } = await import('magic-sdk')
     
@@ -104,13 +87,6 @@ const initMagic = async () => {
     
     // Store globally
     window.magic = magic
-    
-    // Check if user is already logged in with Magic
-    const isLoggedIn = await magic.user.isLoggedIn()
-    
-    if (isLoggedIn) {
-      await magic.user.logout()
-    }
     
     magicInitialized.value = true
     return true
@@ -126,9 +102,8 @@ const initMagic = async () => {
 const loginWithMagic = async () => {
   if (!validateEmail()) return
   
-  // Reinitialize Magic if needed
+  // Initialize Magic if needed
   if (!magic || !magicInitialized.value) {
-
     const initialized = await initMagic()
     if (!initialized) {
       toast.add({
@@ -145,7 +120,6 @@ const loginWithMagic = async () => {
   emailError.value = ''
   
   try {
-    
     // First, check if user exists
     const userCheck = await $fetch(`${apiUrl}/auth/login`, {
       method: 'POST',
@@ -159,13 +133,10 @@ const loginWithMagic = async () => {
       throw new Error(userCheck.message || 'Failed to initiate login')
     }
     
-
-    
     // Show Magic OTP popup
     const didToken = await magic.auth.loginWithEmailOTP({
       email: email.value
     })
-    
     
     // Verify with backend
     const verifyData = await $fetch(`${apiUrl}/auth/magic/verify`, {
@@ -222,9 +193,6 @@ const handleLoginSuccess = (data) => {
   localStorage.setItem('token', token)
   localStorage.setItem('user', JSON.stringify(user))
   
-  // Clear force logout flag
-  sessionStorage.removeItem('force_magic_logout')
-  
   toast.add({
     severity: 'success',
     summary: 'Welcome!',
@@ -258,20 +226,6 @@ const validateEmail = () => {
 
 // Initialize on mount
 onMounted(async () => {
-  
-  // Check if we're coming from logout
-  const fromLogout = sessionStorage.getItem('force_magic_logout')
-  if (fromLogout === 'true') {
-    // Clear any existing Magic instances
-    if (window.magic) {
-      try {
-        await window.magic.user.logout()
-      } catch (e) {}
-      window.magic = null
-    }
-    magic = null
-  }
-  
   await initMagic()
 })
 

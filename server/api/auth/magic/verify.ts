@@ -7,9 +7,9 @@ import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
 const { Magic } = require('@magic-sdk/admin')
 
-// 2. Initialize using the required constructor
 const config = useRuntimeConfig()
 const magic = new Magic(process.env.MAGIC_SECRET_KEY || config.MAGIC_SECRET_KEY)
+
 export default defineEventHandler(async (event) => {
   try {
     // Read request body
@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Validate Magic is configured
-    if (!process.env.MAGIC_SECRET_KEY) {
+    if (!process.env.MAGIC_SECRET_KEY && !config.MAGIC_SECRET_KEY) {
       throw createError({
         statusCode: 500,
         statusMessage: 'Magic SDK not configured'
@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const { email, issuer } = magicUserMetadata
+    const { email } = magicUserMetadata
 
     // Validate email exists
     if (!email) {
@@ -71,26 +71,15 @@ export default defineEventHandler(async (event) => {
     let user = await User.findOne({ email })
     if (!user) {
       // Create new user with student role by default
-      // Only include magicIssuer if it exists (not null)
-      console.log(`User not found via Magic: ${email}`)
-      const userData: any = {
+      // Removed magicIssuer completely
+      console.log(`User not found: ${email}`)
+      user = await User.create({
         email,
         role: 'student'
-      }
-      
-      // Add magicIssuer only if it exists and is not null
-      if (issuer) {
-        userData.magicIssuer = issuer
-      }
-      
-      user = await User.create(userData)
-      console.log(`New user created via Magic: ${email}`)
+      })
+      console.log(`New user created: ${email}`)
     } else {
-      // Update user with Magic issuer if not already set and issuer exists
-      if (issuer && !user.magicIssuer) {
-        user.magicIssuer = issuer
-        await user.save()
-      }
+      console.log(`Existing user logged in: ${email}`)
     }
 
     // Generate JWT token for your app
@@ -100,10 +89,12 @@ export default defineEventHandler(async (event) => {
         email: user.email,
         role: user.role
       },
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET || config.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     )
+    
     console.log("token: ", token)
+    
     // Return user data and token
     return {
       success: true,

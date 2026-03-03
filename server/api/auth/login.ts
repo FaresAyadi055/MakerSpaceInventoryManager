@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
       user = await User.create({
         email,
         role: 'student'
+        // Removed magicIssuer field
       })
     }
 

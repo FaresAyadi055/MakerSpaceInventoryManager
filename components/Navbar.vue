@@ -115,7 +115,7 @@ const adminLinks = [
   { path: '/logs', name: 'Logs', icon: 'pi pi-history' },
   { path: '/requests', name: 'Requests', icon: 'pi pi-inbox' },
   //{ path: '/missing', name: 'Missing Items', icon: 'pi pi-question-circle' },
-  { path: '/returns', name: 'returns', icon: 'pi pi-cart-arrow-down' },
+  { path: '/returns', name: 'Returns', icon: 'pi pi-cart-arrow-down' },
   { path: '/PurchaseList', name: 'Purchase List', icon: 'pi pi-list-check' },
   { path: '/Users', name: 'Users', icon: 'pi pi-user' },
 ]
